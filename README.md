@@ -29,6 +29,17 @@ tools into one window, and keeps a record of each character's journey to 60.
   that learns from your play
 - Guide panel with every zone and section of the route
 
+**Built around your character**
+- Recognises your class and spec: the talent tree with the most points, or the
+  one you choose with `/hb spec`, for all nine classes
+- Quest rewards scored for your spec, leaving out armour and weapons you can't use
+- Suggests your next talent from a levelling plan for your spec
+- Reminds you of your class's quest chains as they open, like druid forms, hunter
+  pets, warlock demons, shaman totems, rogue poisons and mage teleports
+- Warns about what your class runs on: drink, arrows and bullets, soul shards,
+  reagents and a hungry pet
+- Class achievements for every class
+
 **Levelling panel**
 - XP bar, XP/hour and time-to-level, plus a restyled game XP bar
 - Road to 60: forecasts play time needed for each milestone level
@@ -83,6 +94,7 @@ tools into one window, and keeps a record of each character's journey to 60.
 | `/hb` | Open settings |
 | `/hb help` | List all commands |
 | `/hb setup` | Run first-time setup again |
+| `/hb spec` / `spec <name>` / `spec auto` | Show your spec, choose one, or go by your talents |
 | `/hb guide ...` | Levelling guide commands |
 | `/hb quests` / `stats` / `journey` / `alts` / `dungeons` / `achievements` | Open that tab |
 | `/hb cards` | Enemy card collection |
@@ -121,6 +133,7 @@ on the next login. It also picks up any dungeon pictures dropped into
 | `GuideData.lua` | The levelling route |
 | `Images/`, `Media/` | Dungeon pictures, card art and textures |
 | `screenshots/` | README screenshots |
+| `ClassData.lua` | Each class's specs, stat weights, quest chains and talent plans |
 | `Tests/` | Offline test harness (Lua mocks + Python test and route tools) |
 | `Tests/build_release.py` | Builds the zip attached to a release |
 | `RouteBackups/` | Earlier snapshots of files from past reworks |
@@ -132,4 +145,4 @@ images and aren't covered by this licence.
 
 ## Version
 
-0.8.1
+0.9.0
