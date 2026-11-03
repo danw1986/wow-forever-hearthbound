@@ -1,0 +1,8 @@
+<Bindings>
+    <Binding name="HEARTHBOUND_GUIDE_NEXT" header="HEARTHBOUND" category="ADDONS">Hearthbound_GuideKey("Next")</Binding>
+    <Binding name="HEARTHBOUND_GUIDE_BACK" category="ADDONS">Hearthbound_GuideKey("Back")</Binding>
+    <Binding name="HEARTHBOUND_GUIDE_CURRENT" category="ADDONS">Hearthbound_GuideKey("Current")</Binding>
+    <Binding name="HEARTHBOUND_GUIDE_FIND" category="ADDONS">Hearthbound_GuideKey("Find")</Binding>
+    <Binding name="HEARTHBOUND_GUIDE_ARROW" category="ADDONS">Hearthbound_GuideKey("Arrow")</Binding>
+    <Binding name="HEARTHBOUND_GUIDE_TOGGLE" category="ADDONS">Hearthbound_GuideKey("Toggle")</Binding>
+</Bindings>

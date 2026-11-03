@@ -1,0 +1,5 @@
+# Local saved-variable backups written by Backup Hearthbound.bat
+Backups/
+
+__pycache__/
+*.pyc

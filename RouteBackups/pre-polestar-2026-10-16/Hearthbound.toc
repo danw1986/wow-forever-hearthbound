@@ -1,0 +1,75 @@
+## Interface: 16001
+## Title: |cffc79c6eHearthbound|r - Leveling
+## Notes: Levelling companion: XP panel, road to 60, trainer and quest log reminders, gold, quest history, stats, milestones, deaths and alts. Type /hb for settings.
+## Version: 0.7.0
+## IconTexture: Interface\Icons\Ability_Warrior_BattleShout
+## OptionalDeps: Questie, QuestieDB
+## SavedVariables: HearthboundDB
+## SavedVariablesPerCharacter: HearthboundCharDB
+
+Seed.lua
+Core.lua
+Widgets.lua
+Shell.lua
+Lines.lua
+Panel.lua
+XP.lua
+BlizzXPBar.lua
+Road.lua
+Trainer.lua
+QuestHelper.lua
+DungeonData.lua
+DungeonQuestLocations.lua
+LootData.lua
+Zones.lua
+Gold.lua
+Gear.lua
+History.lua
+Quests.lua
+PhotoData.lua
+Journal.lua
+DungeonPhotos.lua
+MapQuests.lua
+QuestieLink.lua
+RewardPicker.lua
+AutoQuest.lua
+SecretsData.lua
+Secrets.lua
+QuestTab.lua
+Stats.lua
+Milestones.lua
+Welcome.lua
+Training.lua
+Travel.lua
+Supplies.lua
+Goals.lua
+Deaths.lua
+Kills.lua
+Cards.lua
+Tracking.lua
+Alts.lua
+Bags.lua
+QuestItems.lua
+MobTips.lua
+Vendor.lua
+QuestLinks.lua
+QuestPins.lua
+Objectives.lua
+QuestTargets.lua
+GuideData_Forever.lua
+GuideData_Classic.lua
+GuideDetours.lua
+GuideLearn.lua
+GuideOnTheWay.lua
+Guide.lua
+GuideRoute.lua
+GuideItemButton.lua
+GuideLogTidy.lua
+GuideMap.lua
+Grind.lua
+Minimap.lua
+Journey.lua
+Achievements.lua
+Tools.lua
+Setup.lua
+Options.lua

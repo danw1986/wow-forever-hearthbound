@@ -1,0 +1,33 @@
+Save a picture here named after its dungeon, then run Backup Hearthbound.bat with the game closed.
+It's cropped to a wide banner and appears on that dungeon's card and page after you log in.
+Formats: .jpg, .jpeg, .png, .bmp or .gif (not .webp). Use these names:
+
+  ragefire-chasm.jpg
+  wailing-caverns.jpg
+  deadmines.jpg
+  shadowfang-keep.jpg
+  blackfathom-deeps.jpg
+  stockade.jpg
+  gnomeregan.jpg
+  razorfen-kraul.jpg
+  scarlet-monastery.jpg
+  razorfen-downs.jpg
+  uldaman.jpg
+  zulfarrak.jpg
+  maraudon.jpg
+  sunken-temple.jpg
+  blackrock-depths.jpg
+  lower-blackrock-spire.jpg
+  upper-blackrock-spire.jpg
+  dire-maul.jpg
+  scholomance.jpg
+  stratholme.jpg
+  hall-of-thanes.jpg
+  ruins-of-lordaeron.jpg
+  excavation-site.jpg
+  city-of-dalaran.jpg
+  drowned-city.jpg
+  kroldok-stronghold.jpg
+  alcaz-island-prison.jpg
+  blackmaw-hold.jpg
+  shapers-terrace.jpg
