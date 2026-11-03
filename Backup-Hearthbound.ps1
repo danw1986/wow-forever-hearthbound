@@ -23,7 +23,10 @@ if (-not (Test-Path $wtf)) {
     exit 1
 }
 
-if (Get-Process -Name "WowB", "Wow*" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*_classic_beta_*" }) {
+# The game this addon is installed in: AddOns\<addon> is three folders down from it
+$gameDir = [System.IO.Path]::GetFullPath((Join-Path $addonDir "..\..\..")).TrimEnd("\") + "\"
+if (Get-Process -Name "WowB", "Wow*" -ErrorAction SilentlyContinue | Where-Object {
+        $_.Path -and $_.Path.StartsWith($gameDir, [System.StringComparison]::OrdinalIgnoreCase) }) {
     Write-Host "The game is still running. Close it first - it saves addon data when it exits." -ForegroundColor Yellow
     Pause-IfDoubleClicked
     exit 1
