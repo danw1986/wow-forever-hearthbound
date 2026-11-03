@@ -262,7 +262,27 @@ end
 -- Forever sometimes gives a quest another ID than the route's: a quest of the
 -- same name in your log (or handed in) that isn't one of the route's own quests
 -- counts for the step
-local function NameKey(name) return name and name:lower():gsub("[^%w]", "") or nil end
+K.NONE = {} -- an empty list to loop over, never written to: the checks below run for hundreds of steps a second
+K.nameKeys = {}
+local function NameKey(name)
+    if not name then return nil end
+    local key = K.nameKeys[name]
+    if not key then
+        key = name:lower():gsub("[^%w]", "")
+        K.nameKeys[name] = key
+    end
+    return key
+end
+
+-- the quest IDs a step counts for, kept on the step
+function K.Ids(s)
+    local ids = s.ids
+    if not ids then
+        ids = s.alts or { s.q }
+        s.ids = ids
+    end
+    return ids
+end
 
 local function SameNameInLog(s)
     local key = NameKey(s.name)
@@ -277,8 +297,16 @@ end
 local function HandedInNames()
     local m = Memo("names")
     if m.index then return m.index end
+    local quests = ns.cdb and ns.cdb.quests or K.NONE
+    local count = 0
+    for _ in pairs(quests) do count = count + 1 end
+    if K.handedIn and K.handedInOf == quests and K.handedInCount == count then
+        m.index = K.handedIn
+        return K.handedIn
+    end
     local index = {}
-    for id, r in pairs(ns.cdb and ns.cdb.quests or {}) do
+    K.handedIn, K.handedInOf, K.handedInCount = index, quests, count
+    for id, r in pairs(quests) do
         if not r.imported and r.title then
             local key = NameKey(r.title)
             local ids = index[key]
@@ -293,14 +321,14 @@ end
 local function SameNameHandedIn(s)
     local key = NameKey(s.name)
     if not key or key == "" then return false end
-    for _, id in ipairs(HandedInNames()[key] or {}) do
+    for _, id in ipairs(HandedInNames()[key] or K.NONE) do
         if id ~= s.q and not acceptAt[id] then return true end
     end
     return false
 end
 
 local function StepInLog(s)
-    for _, id in ipairs(s.alts or { s.q }) do
+    for _, id in ipairs(K.Ids(s)) do
         local inLog, complete = InLog(id)
         -- a step for one objective: done once that objective is
         if inLog and s.obj and not complete then complete = K.ObjectiveFinished(id, s.obj) end
@@ -318,16 +346,19 @@ local function NameAliases(s)
     local cached = nameAliases[s.q]
     if cached then return cached end
     local ids, pending = ns.QuestieIdsByName and ns.QuestieIdsByName("Quest", s.name)
-    local out = {}
-    for _, id in ipairs(type(ids) == "table" and ids or {}) do
-        if id ~= s.q and not acceptAt[id] then out[#out + 1] = id end
+    local out = K.NONE
+    if type(ids) == "table" then
+        out = {}
+        for _, id in ipairs(ids) do
+            if id ~= s.q and not acceptAt[id] then out[#out + 1] = id end
+        end
     end
     if not pending and (ids or (ns.QuestieAvailable and ns.QuestieAvailable())) then nameAliases[s.q] = out end
     return out
 end
 
 local function StepCompleted(s)
-    for _, id in ipairs(s.alts or { s.q }) do
+    for _, id in ipairs(K.Ids(s)) do
         if Completed(id) then return true end
     end
     if SameNameHandedIn(s) then return true end
@@ -1156,7 +1187,7 @@ function ns.GuideClearQuestSkips(q)
     local n = 0
     for _, s in ipairs(list) do
         local match = s.q == q
-        for _, id in ipairs(s.alts or {}) do if id == q then match = true end end
+        for _, id in ipairs(s.alts or K.NONE) do if id == q then match = true end end
         if match and QUEST_STEP[s.t] and state.done[s.i] then
             state.done[s.i] = nil
             n = n + 1
@@ -1277,7 +1308,7 @@ function ns.GuidePick(index)
     -- a quest that's in your log: make it the game's focused quest too
     if s.q and (s.t == "C" or s.t == "T") then
         local q
-        for _, id in ipairs(s.alts or { s.q }) do
+        for _, id in ipairs(K.Ids(s)) do
             if InLog(id) then q = id break end
         end
         if not q then
@@ -1789,7 +1820,7 @@ function ns.GuideUsesQuest(q)
     if acceptAt[q] then return true end
     for _, s in ipairs(list) do
         if s.q == q then return true end
-        for _, id in ipairs(s.alts or {}) do if id == q then return true end end
+        for _, id in ipairs(s.alts or K.NONE) do if id == q then return true end end
     end
     return false
 end
@@ -1832,12 +1863,14 @@ function ns.GuideInteractTargets(maxYards)
         local _, complete = InLog(e.id)
         if complete then ready[e.id] = e end
     end
-    for _, s in ipairs(list) do
-        local tg = s.target
-        if s.t == "T" and s.q and tg and tg.kind == "npc" and tg.name then
-            local match = ready[s.q]
-            for _, id in ipairs(s.alts or {}) do match = match or ready[id] end
-            if match then Add(tg.name, tg.id, "turnin", s.name, Vector(s), Target(s)) end
+    if next(ready) then
+        for _, s in ipairs(list) do
+            local tg = s.target
+            if s.t == "T" and s.q and tg and tg.kind == "npc" and tg.name then
+                local match = ready[s.q]
+                for _, id in ipairs(s.alts or K.NONE) do match = match or ready[id] end
+                if match then Add(tg.name, tg.id, "turnin", s.name, Vector(s), Target(s)) end
+            end
         end
     end
     -- and their hand-in NPC where QuestieDB has it (finished quests the route

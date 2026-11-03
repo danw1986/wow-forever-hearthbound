@@ -224,6 +224,16 @@ W.tick()
 check("one of them in the log: applies", ns._dbg.whenHolds(fake))
 check("a quest done on the way never stops the route", lst[find(lst, t="C", q=871, optional=True) or 1].optional)
 
+# handed in under another ID (Forever does this): noticed, though the list of names is kept between checks
+L, W, ns, lst = playing(level=12)
+k = find(lst, t="T", q=lst[find(lst, t="A")].q)
+s_ = lst[k]
+check("a hand-in not done yet", not ns._dbg.why(k)[3])
+ns.cdb.quests = ns.cdb.quests or L.table()
+ns.cdb.quests[999999] = L.table_from({"title": s_.name})
+W.time = W.time + 1
+check("a quest of the same name handed in under another ID counts", ns._dbg.why(k)[3])
+
 # 8. what the import has to get right
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)

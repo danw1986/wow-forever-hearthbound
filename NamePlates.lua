@@ -809,14 +809,12 @@ local function UnitOn(plate)
 end
 
 local function EachPlate(fn)
-    local seen = {}
     for plate, unit in pairs(unitOf) do
-        seen[plate] = true
         fn(unit, plate)
     end
     if not (C_NamePlate and C_NamePlate.GetNamePlates) then return end
     for _, plate in ipairs(Safe(C_NamePlate.GetNamePlates) or {}) do
-        local unit = not seen[plate] and UnitOn(plate)
+        local unit = not unitOf[plate] and UnitOn(plate)
         if unit then fn(unit, plate) end
     end
 end
@@ -1017,6 +1015,10 @@ table.insert(ns.inits, function()
     -- threat changes all the time in a fight: check every quarter second while you're in one;
     -- and health on every plate ten times a second (some clients send few health events)
     local elapsed, hpElapsed, sweepElapsed = 0, 0, 0
+    local function PlateHealth(unit, plate)
+        local d = plate.hb
+        if d and d:IsShown() and not (plate.IsForbidden and plate:IsForbidden()) then Try(Health, d, unit) end
+    end
     local ticker = CreateFrame("Frame")
     ticker:SetScript("OnUpdate", function(_, dt)
         elapsed, hpElapsed = elapsed + dt, hpElapsed + dt
@@ -1027,10 +1029,7 @@ table.insert(ns.inits, function()
         end
         if hpElapsed >= 0.1 and Styled() then
             hpElapsed = 0
-            EachPlate(function(unit, plate)
-                local d = plate.hb
-                if d and d:IsShown() and not (plate.IsForbidden and plate:IsForbidden()) then Try(Health, d, unit) end
-            end)
+            EachPlate(PlateHealth)
         end
         if elapsed < TICK then return end
         elapsed = 0
