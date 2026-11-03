@@ -132,4 +132,4 @@ images and aren't covered by this licence.
 
 ## Version
 
-0.8.0
+0.8.1
