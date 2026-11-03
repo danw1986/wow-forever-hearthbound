@@ -370,7 +370,7 @@ local function BuildSettingsPage(page)
         "Under Where next: the dungeons that suit your level, including WoW Forever's nine new ones.")
     col:Check("Upcoming skills", "showUpcoming", "Skills unlocking in your next few levels - something to look forward to.")
     col:Slider("Upcoming levels shown", "upcomingLevels", "How many future levels to list.", 1, 6, 1, "%d")
-    col:Check("Class quests", "showQuests", "Reminders for the Defensive Stance, Berserker Stance and Whirlwind weapon quests.")
+    col:Check("Class quests", "showQuests", "Reminders for your class's quest chains when your level reaches them: spells, pets, forms, totems and weapons.")
     col:Check("Objectives nearby", "showObjectives",
         "The closest mobs, items, objects and places your quests still need, with distances. Click one to mark it.")
     col:Check("Grind spots", "showGrind",
@@ -552,7 +552,7 @@ local function BuildSettingsPage(page)
     col:Header("Colours")
     local function ThemeLabel()
         for _, t in ipairs(ns.THEMES) do if t.key == ns.db.theme then return "Theme: " .. t.label end end
-        return "Theme: Warrior"
+        return "Theme: Hearthbound"
     end
     local themeButton = col:ButtonPair(ThemeLabel(), function(self)
         local index = 1

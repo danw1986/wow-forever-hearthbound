@@ -31,7 +31,7 @@ local SOUND_CLICK = SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 856
 -- as every frame is coloured when it's built)
 ---------------------------------------------------------------------------
 ns.THEMES = {
-    { key = "warrior", label = "Warrior", accent = { 0.80, 0.18, 0.12, 1 }, gold = { 0.78, 0.61, 0.43, 1 },
+    { key = "warrior", label = "Hearthbound", accent = { 0.80, 0.18, 0.12, 1 }, gold = { 0.78, 0.61, 0.43, 1 },
       bg = { 0.05, 0.05, 0.06, 0.92 }, panel = { 0.13, 0.13, 0.15, 1 } },
     { key = "slate", label = "Slate", accent = { 0.25, 0.55, 0.85, 1 }, gold = { 0.62, 0.74, 0.86, 1 },
       bg = { 0.04, 0.06, 0.09, 0.92 }, panel = { 0.10, 0.13, 0.17, 1 } },

@@ -156,6 +156,10 @@ function ns.DebugReport()
     Add("Hearthbound %s - client %s (%s, interface %s) - %s", ns.version or "?", tostring(version), tostring(build), tostring(toc), date("%Y-%m-%d %H:%M"))
     local _, race = UnitRace("player")
     local _, class = UnitClass("player")
+    if ns.PlayerSpec then
+        local _, specLabel, specSource, specSpent = ns.PlayerSpec()
+        Add("Spec: %s (%s), %s talent points spent", tostring(specLabel), tostring(specSource), tostring(specSpent))
+    end
     Add("Character: level %d %s %s, %s, realm %s", UnitLevel("player"), tostring(race), tostring(class),
         tostring(UnitFactionGroup("player")), tostring(GetRealmName()))
     local mapID = Safe(C_Map.GetBestMapForUnit, "player")

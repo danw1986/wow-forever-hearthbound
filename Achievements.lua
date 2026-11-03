@@ -309,6 +309,14 @@ local CATEGORIES = {
     { key = "gold", label = "Gold" },
     { key = "fun", label = "Fun" },
     { key = "warrior", label = "Warrior", class = "WARRIOR" },
+    { key = "paladin", label = "Paladin", class = "PALADIN" },
+    { key = "hunter", label = "Hunter", class = "HUNTER" },
+    { key = "rogue", label = "Rogue", class = "ROGUE" },
+    { key = "priest", label = "Priest", class = "PRIEST" },
+    { key = "shaman", label = "Shaman", class = "SHAMAN" },
+    { key = "mage", label = "Mage", class = "MAGE" },
+    { key = "warlock", label = "Warlock", class = "WARLOCK" },
+    { key = "druid", label = "Druid", class = "DRUID" },
 }
 local groups = {} -- category key -> groups
 local allItems = {}
@@ -572,6 +580,16 @@ local function Define()
     Group("warrior", { title = "Whirlwind", desc = "Earn a weapon from the Whirlwind Weapon quest.", icon = ICON.whirlwind,
         prefix = "ach:whirlwind:", steps = { 1 }, tiers = { "gold" },
         value = function(c) return c.whirlwind and 1 or 0 end, label = function() return "Whirlwind weapon" end, fmt = Yes })
+
+    -- your class's quest chains (the warrior's stances and Whirlwind weapon are above)
+    local cat = (ns.PlayerClassFile() or ""):lower()
+    for _, q in ipairs(ns.ClassQuestsForMe()) do
+        if q.max < 60 and not q.title:find("Stance") and not q.title:find("Whirlwind") then
+            Group(cat, { title = q.title, desc = q.why, icon = ICON.quest,
+                prefix = "ach:class:" .. q.id .. ":", steps = { 1 }, tiers = { q.spells and "gold" or "silver" },
+                value = function() return ns.ClassQuestDone(q) and 1 or 0 end, label = function() return q.title end, fmt = Yes })
+        end
+    end
 end
 
 ---------------------------------------------------------------------------
