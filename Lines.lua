@@ -12,27 +12,42 @@ function ns.CreateLineView(parent, x, width)
     local add = {}
     view.add = add
 
+    -- the line tables, reused: the panel rebuilds its lines every second
+    local spare, used = {}, 0
+    local function NewLine(kind)
+        used = used + 1
+        local line = spare[used]
+        if line then wipe(line) else line = {} spare[used] = line end
+        line.kind = kind
+        lines[#lines + 1] = line
+        return line
+    end
+
     -- opts (optional): { onClick = fn, collapsed = bool } makes the heading a fold toggle
     -- opts.icon (optional): a texture for the heading; otherwise one is picked by its text
     function add.header(text, opts)
-        lines[#lines + 1] = { kind = "header", text = text, onClick = opts and opts.onClick,
-                              collapsed = opts and opts.collapsed, icon = opts and opts.icon }
+        local line = NewLine("header")
+        line.text, line.onClick = text, opts and opts.onClick
+        line.collapsed, line.icon = opts and opts.collapsed, opts and opts.icon
     end
 
     -- label on the left, value on the right
     function add.row(left, right)
-        lines[#lines + 1] = { kind = "row", left = left, right = right }
+        local line = NewLine("row")
+        line.left, line.right = left, right
     end
 
     -- full-width wrapped text; onClick (optional) makes it clickable, tooltip
     -- (optional) is shown on hover
     function add.note(text, color, onClick, tooltip)
-        lines[#lines + 1] = { kind = "note", text = text, color = color, onClick = onClick, tooltip = tooltip }
+        local line = NewLine("note")
+        line.text, line.color, line.onClick, line.tooltip = text, color, onClick, tooltip
     end
 
     -- short label on the left, wrapped text beside it
     function add.list(left, right)
-        lines[#lines + 1] = { kind = "list", left = left, right = right }
+        local line = NewLine("list")
+        line.left, line.right = left, right
     end
 
     -- progress bar with text inside; value 0..1
@@ -48,6 +63,7 @@ function ns.CreateLineView(parent, x, width)
 
     function view:Begin()
         wipe(lines)
+        used = 0
     end
 
     local function GetLine(i)

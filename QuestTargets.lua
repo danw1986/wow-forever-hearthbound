@@ -427,7 +427,7 @@ end
 
 table.insert(ns.inits, function()
     Build()
-    C_Timer.NewTicker(1, Update)
+    C_Timer.After(0.33, function() C_Timer.NewTicker(1, Update) end) -- apart from the guide's and the panel's
     ns.On("PLAYER_REGEN_ENABLED", Update) -- catch up on anything held back during combat
     table.insert(ns.refreshers, function() if not InCombatLockdown() then Update() end end)
 end)

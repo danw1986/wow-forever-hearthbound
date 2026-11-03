@@ -22,6 +22,9 @@ local nextOf = {}     -- questId -> quests that need it done first (the chain on
 local areaQuests = {} -- zone area ID -> quest IDs filed under it (not dungeons)
 local giversByTitle = {} -- normalised title -> giver entry, for loose name matching
 local scanWaiters = {}
+local MAX_SCAN_WAITERS = 32
+local scanRetryAt = 0 -- a scan that couldn't run isn't tried again before this
+local SCAN_RETRY_SECONDS = 10
 
 -- "Oh Brother. . ." / "oh brother..." -> "ohbrother"
 local function NormalTitle(title)
@@ -209,15 +212,17 @@ end
 
 -- What the scan learned about a quest title: { id, giver, mapID, x, y, kind, level }, or nil.
 -- Before the scan has finished this starts it (in the background) and returns nil.
+local function TitlesIndexed()
+    wipe(startCache)
+    wipe(finishCache)
+    if ns.ClearJournalQuestCache then ns.ClearJournalQuestCache() end
+    if ns.RefreshJournal then ns.RefreshJournal() end
+end
+
 local function Indexed(title)
     if not title or not Lib() then return nil end
     if not questGivers then
-        ScanQuests(function()
-            wipe(startCache)
-            wipe(finishCache)
-            if ns.ClearJournalQuestCache then ns.ClearJournalQuestCache() end
-            if ns.RefreshJournal then ns.RefreshJournal() end
-        end)
+        ScanQuests(TitlesIndexed)
         return nil, true
     end
     return giversByTitle[NormalTitle(title)]
@@ -314,10 +319,16 @@ ns.questieScanStats = {}
 
 function ScanQuests(onDone)
     if questGivers then return onDone() end
-    table.insert(scanWaiters, onDone)
-    if scanning then return end
     local l = Lib()
     if not l then return end
+    -- asked for many times a second until the scan's done: everyone waits once,
+    -- and a list that can't drain (a scan that can't run) stays small
+    local waiting = #scanWaiters >= MAX_SCAN_WAITERS
+    for _, fn in ipairs(scanWaiters) do
+        if fn == onDone then waiting = true break end
+    end
+    if not waiting then scanWaiters[#scanWaiters + 1] = onDone end
+    if scanning or GetTime() < scanRetryAt then return end
 
     local areaToKey = {}
     for key, info in pairs(BuildDungeonIndex() or {}) do
@@ -325,7 +336,10 @@ function ScanQuests(onDone)
     end
 
     local ok, ids = pcall(l.Quest.GetAllIds)
-    if not ok or type(ids) ~= "table" then return end
+    if not ok or type(ids) ~= "table" then
+        scanRetryAt = GetTime() + SCAN_RETRY_SECONDS
+        return
+    end
     scanning = true
     local givers, byDungeon, i = {}, {}, 1
     local stats = { quests = #ids, named = 0, withStarter = 0, located = 0 }
@@ -410,7 +424,7 @@ function ScanQuests(onDone)
     local function Step()
         local stopAt = clock() + SCAN_BUDGET_MS
         while i <= #ids and clock() < stopAt do
-            ScanOne(ids[i])
+            if not pcall(ScanOne, ids[i]) then stats.failed = (stats.failed or 0) + 1 end
             i = i + 1
         end
         if i <= #ids then
@@ -420,6 +434,7 @@ function ScanQuests(onDone)
             emptyScans = emptyScans + 1
             ns.questieScanStats = stats
             scanning = false
+            scanRetryAt = GetTime() + SCAN_RETRY_SECONDS
             wipe(giversByTitle)
             wipe(giversById)
             wipe(itemUses)
@@ -443,10 +458,7 @@ end
 function ns.QuestieDungeonQuests(dungeonKey)
     if not Lib() then return nil end
     if dungeonQuests then return dungeonQuests[dungeonKey] or {} end
-    ScanQuests(function()
-        if ns.ClearJournalQuestCache then ns.ClearJournalQuestCache() end
-        if ns.RefreshJournal then ns.RefreshJournal() end
-    end)
+    ScanQuests(TitlesIndexed)
     return nil
 end
 
@@ -454,7 +466,7 @@ end
 function ns.QuestieQuestGivers(onReady)
     if not Lib() then return nil end
     if questGivers then return questGivers end
-    ScanQuests(onReady or function() end)
+    ScanQuests(onReady or TitlesIndexed)
     return nil
 end
 
@@ -526,7 +538,7 @@ local function WorldPos(mapID, x, y)
 end
 
 -- Where you are in the same world yards: continent, x, y (nil if unknown)
-function ns.PlayerWorldPos()
+local function PlayerWorldPosNow()
     local hbd = Dragons()
     if hbd then
         local ok, wx, wy, instance = pcall(hbd.GetPlayerWorldPosition, hbd)
@@ -540,6 +552,16 @@ function ns.PlayerWorldPos()
     local ok, x, y = pcall(pos.GetXY, pos)
     if not ok or not x or ns.IsSecret(x) then return nil end
     return WorldPos(mapID, x * 100, y * 100)
+end
+
+local posAt, posContinent, posX, posY
+function ns.PlayerWorldPos()
+    local now = GetTime()
+    if now ~= posAt then
+        posAt = now
+        posContinent, posX, posY = PlayerWorldPosNow()
+    end
+    return posContinent, posX, posY
 end
 ns.WorldPos = WorldPos
 

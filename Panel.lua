@@ -221,14 +221,22 @@ local LINE_KINDS = { "row", "note", "list", "bar" }
 
 -- In the full panel each heading shows at most ns.db.sectionMaxLines lines
 -- (0: no limit); the rest fold into a "+N more" line you can click open.
-local function SectionWriter()
-    local compact = ns.db.compactPanel
-    local folded = false
-    local budget = compact and COMPACT_LINES_NO_HEADER or math.huge
-    local cap = (ns.db.sectionMaxLines or 0) > 0 and ns.db.sectionMaxLines or math.huge
-    local key, count, hidden, expanded, over = nil, 0, 0, false, false
-    local writer = {}
+-- One writer, reset for each section: the panel redraws every second.
+local writer = {}
+local compact, folded, budget, cap = false, false, 0, math.huge
+local key, count, hidden, expanded, over = nil, 0, 0, false, false
+local headerClicks, headerOpts = {}, {} -- a section's fold toggle, kept by its name
 
+local function SectionWriter()
+    compact = ns.db.compactPanel
+    folded = false
+    budget = compact and COMPACT_LINES_NO_HEADER or math.huge
+    cap = (ns.db.sectionMaxLines or 0) > 0 and ns.db.sectionMaxLines or math.huge
+    key, count, hidden, expanded, over = nil, 0, 0, false, false
+    return writer
+end
+
+do
     -- the "+N more" / "Show less" line at the end of a capped section
     function writer.flush()
         if compact or not key or folded then return end
@@ -255,13 +263,17 @@ local function SectionWriter()
         count = 0
         budget = compact and 1 or math.huge
         if compact then return end -- compact has no headings; folded sections vanish
-        view.add.header(text, {
-            collapsed = folded,
-            onClick = function()
-                ns.db.collapsedSections[key] = (not folded) or nil
+        local click = headerClicks[key]
+        if not click then
+            local k = key
+            click = function()
+                ns.db.collapsedSections[k] = (not ns.db.collapsedSections[k]) or nil
                 ns.UpdatePanel()
-            end,
-        })
+            end
+            headerClicks[key] = click
+        end
+        headerOpts.collapsed, headerOpts.onClick = folded, click
+        view.add.header(text, headerOpts)
     end
 
     for _, kind in ipairs(LINE_KINDS) do
@@ -281,7 +293,6 @@ local function SectionWriter()
             view.add[kind](...)
         end
     end
-    return writer
 end
 
 -- scroll the sections to offset (clamped), and place the scrollbar thumb
@@ -451,5 +462,5 @@ table.insert(ns.inits, function()
     ns.On("PLAYER_XP_UPDATE", function() ns.UpdatePanel() end)
     ns.On("UPDATE_EXHAUSTION", function() ns.UpdatePanel() end)
     ns.On("PLAYER_LEVEL_UP", function() C_Timer.After(0.5, ns.UpdatePanel) end)
-    C_Timer.NewTicker(1, ns.UpdatePanel)
+    C_Timer.After(0.66, function() C_Timer.NewTicker(1, ns.UpdatePanel) end) -- apart from the guide's and the targets'
 end)
