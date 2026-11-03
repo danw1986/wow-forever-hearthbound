@@ -527,6 +527,7 @@ local function ItemBasics(id)
 end
 
 local function UsableByMe(id)
+    if not id then return true end
     local _, classID, subClassID = ItemBasics(id)
     if not classID then return true end -- unknown: don't hide it
     local _, class = UnitClass("player")
@@ -541,6 +542,8 @@ local function UsableByMe(id)
     end
     return true
 end
+
+ns.ItemUsableByMe = UsableByMe
 
 local SLOT_FILTERS = {
     { label = "All slots" },

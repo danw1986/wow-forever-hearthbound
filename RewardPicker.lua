@@ -1,7 +1,7 @@
 local ADDON_NAME, ns = ...
 
 -- Quest reward picker: when a quest offers a choice, score each reward for
--- your class (a DPS warrior first of all) against what you're wearing in that
+-- your class and spec against what you're wearing in that
 -- slot, highlight the best upgrade and say why. With "Pick rewards for me" on
 -- (and auto hand-in), it takes that reward; with no upgrade it takes the one
 -- worth most at a vendor.
@@ -11,22 +11,22 @@ local Safe = ns.Safe
 local GetItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
 local GetItemStats = (C_Item and C_Item.GetItemStats) or GetItemStats
 
--- stat weights per class; weapon DPS counts for melee
-local WEIGHTS = {
-    WARRIOR = { STRENGTH = 1, AGILITY = 0.65, STAMINA = 0.45, ATTACK_POWER = 0.5, DPS = 3, ARMOR = 0.02 },
-    ROGUE = { AGILITY = 1, STRENGTH = 0.55, STAMINA = 0.35, ATTACK_POWER = 0.5, DPS = 3, ARMOR = 0.01 },
-    HUNTER = { AGILITY = 1, STAMINA = 0.4, INTELLECT = 0.3, ATTACK_POWER = 0.4, DPS = 1, RANGED_DPS = 3, ARMOR = 0.01 },
-    PALADIN = { STRENGTH = 1, STAMINA = 0.5, INTELLECT = 0.4, AGILITY = 0.4, DPS = 2.5, ARMOR = 0.02 },
-    SHAMAN = { INTELLECT = 0.8, STRENGTH = 0.7, STAMINA = 0.5, AGILITY = 0.4, DPS = 2, ARMOR = 0.015 },
-    DRUID = { AGILITY = 0.8, STRENGTH = 0.7, INTELLECT = 0.6, STAMINA = 0.5, ARMOR = 0.015 },
-    MAGE = { INTELLECT = 1, STAMINA = 0.5, SPIRIT = 0.4, ARMOR = 0.005 },
-    PRIEST = { INTELLECT = 1, SPIRIT = 0.6, STAMINA = 0.5, ARMOR = 0.005 },
-    WARLOCK = { INTELLECT = 0.9, STAMINA = 0.7, SPIRIT = 0.3, ARMOR = 0.005 },
-}
+-- what the game calls each stat -> the name in your spec's weights (ClassData.lua)
 local STAT_KEYS = {
-    ITEM_MOD_STRENGTH_SHORT = "STRENGTH", ITEM_MOD_AGILITY_SHORT = "AGILITY", ITEM_MOD_STAMINA_SHORT = "STAMINA",
-    ITEM_MOD_INTELLECT_SHORT = "INTELLECT", ITEM_MOD_SPIRIT_SHORT = "SPIRIT", ITEM_MOD_ATTACK_POWER_SHORT = "ATTACK_POWER",
-    RESISTANCE0_NAME = "ARMOR",
+    ITEM_MOD_STRENGTH_SHORT = "str", ITEM_MOD_AGILITY_SHORT = "agi", ITEM_MOD_STAMINA_SHORT = "sta",
+    ITEM_MOD_INTELLECT_SHORT = "int", ITEM_MOD_SPIRIT_SHORT = "spi", RESISTANCE0_NAME = "armor",
+    ITEM_MOD_HEALTH_SHORT = "health", ITEM_MOD_MANA_SHORT = "mana",
+    ITEM_MOD_ATTACK_POWER_SHORT = "ap", ITEM_MOD_RANGED_ATTACK_POWER_SHORT = "rap",
+    ITEM_MOD_SPELL_DAMAGE_DONE_SHORT = "sp", ITEM_MOD_SPELL_POWER_SHORT = "sp",
+    ITEM_MOD_SPELL_HEALING_DONE_SHORT = "heal",
+    ITEM_MOD_MANA_REGENERATION_SHORT = "mp5", ITEM_MOD_POWER_REGEN0_SHORT = "mp5",
+    ITEM_MOD_HEALTH_REGEN_SHORT = "hp5", ITEM_MOD_HEALTH_REGENERATION_SHORT = "hp5",
+    ITEM_MOD_CRIT_RATING_SHORT = "crit", ITEM_MOD_CRIT_MELEE_RATING_SHORT = "crit",
+    ITEM_MOD_HIT_RATING_SHORT = "hit", ITEM_MOD_HIT_MELEE_RATING_SHORT = "hit",
+    ITEM_MOD_CRIT_SPELL_RATING_SHORT = "spellCrit", ITEM_MOD_HIT_SPELL_RATING_SHORT = "spellHit",
+    ITEM_MOD_DEFENSE_SKILL_RATING_SHORT = "defense", ITEM_MOD_DODGE_RATING_SHORT = "dodge",
+    ITEM_MOD_PARRY_RATING_SHORT = "parry", ITEM_MOD_BLOCK_RATING_SHORT = "block",
+    ITEM_MOD_BLOCK_VALUE_SHORT = "blockValue",
 }
 -- equip slot -> the inventory slots it competes with
 local SLOTS = {
@@ -37,42 +37,33 @@ local SLOTS = {
     INVTYPE_WEAPONOFFHAND = { 17 }, INVTYPE_SHIELD = { 17 }, INVTYPE_HOLDABLE = { 17 },
     INVTYPE_RANGED = { 18 }, INVTYPE_RANGEDRIGHT = { 18 }, INVTYPE_THROWN = { 18 },
 }
-local PLATE, MAIL = 4, 3 -- armour subclasses
+local RANGED = { INVTYPE_RANGED = true, INVTYPE_RANGEDRIGHT = true, INVTYPE_THROWN = true }
 
-local function Weights()
-    local _, class = UnitClass("player")
-    return WEIGHTS[class] or WEIGHTS.WARRIOR, class
-end
-
--- a number for how good an item is for you, or nil if its details aren't loaded
+-- a number for how good an item is for your spec, or nil if its details aren't loaded
 local function Score(link)
     if not link then return 0 end
     local stats = GetItemStats and Safe(GetItemStats, link)
     if not stats then return nil end
-    local w = Weights()
+    local w = ns.SpecWeights()
+    if not w then return 0 end
     local _, _, _, _, _, _, _, _, equipLoc = GetItemInfo(link)
     local score = 0
     for key, value in pairs(stats) do
         local stat = STAT_KEYS[key]
         if stat and w[stat] then score = score + value * w[stat] end
         if key == "ITEM_MOD_DAMAGE_PER_SECOND_SHORT" then
-            local ranged = equipLoc == "INVTYPE_RANGED" or equipLoc == "INVTYPE_RANGEDRIGHT" or equipLoc == "INVTYPE_THROWN"
-            score = score + value * ((ranged and w.RANGED_DPS) or w.DPS or 0) * (ranged and 0.3 or 1)
+            score = score + value * ((RANGED[equipLoc] and w.rdps or w.dps) or 0)
         end
     end
     return score
 end
 
--- can you wear it now? (level, and plate before 40 for warriors and paladins)
+-- can you use it now? (level, and the armour and weapons your class can use)
 local function Wearable(link)
-    local _, _, _, _, minLevel, _, _, _, equipLoc, _, _, classID, subclassID = GetItemInfo(link)
+    local _, _, _, _, minLevel, _, _, _, equipLoc = GetItemInfo(link)
     if not equipLoc or equipLoc == "" or not SLOTS[equipLoc] then return false end
     if minLevel and minLevel > UnitLevel("player") then return false end
-    local _, class = UnitClass("player")
-    if classID == 4 then -- armour
-        if subclassID == PLATE and not ((class == "WARRIOR" or class == "PALADIN") and UnitLevel("player") >= 40) then return false end
-        if subclassID == MAIL and not (class == "WARRIOR" or class == "PALADIN" or ((class == "HUNTER" or class == "SHAMAN") and UnitLevel("player") >= 40)) then return false end
-    end
+    if ns.ItemUsableByMe and not ns.ItemUsableByMe(link) then return false end
     return true, equipLoc
 end
 
@@ -168,7 +159,8 @@ local function OnQuestComplete()
     local link = Safe(GetQuestItemLink, "choice", index)
     if why == "upgrade" then
         Highlight(index, "UPGRADE")
-        ns.Print(format("Best reward for you: %s%s", link or "?",
+        local _, spec = ns.PlayerSpec()
+        ns.Print(format("Best reward for %s: %s%s", spec or "you", link or "?",
             replaces and (" - better than your " .. replaces) or " - fills an empty slot"))
     else
         Highlight(index, "SELL")

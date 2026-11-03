@@ -4,14 +4,15 @@ local ADDON_NAME, ns = ...
 --
 -- Skill data comes from the class trainer itself: whenever the trainer window
 -- opens, every skill it lists (learned, available and future) is recorded with
--- its level. Until the first visit, a built-in list of Classic warrior skills
--- is used instead. Forever has moved some skills (e.g. Slam), which is why
--- the trainer's own list replaces it.
+-- its level. Until the first visit a warrior has a built-in list of Classic's
+-- skills; other classes have none, because Forever has moved too much (quests
+-- teach druid forms, rogue poisons and shaman totems), so they get asked to visit.
 
 local Safe = ns.Safe
 local format = string.format
 
 local DEFENSIVE_STANCE, BERSERKER_STANCE = 71, 2458
+local KNOWN_SKILLS_NONE = "|cffffd200Visit your class trainer once|r  |cff999999- then this lists what's waiting and what's next|r"
 local MAX_PENDING_SHOWN = 6
 
 -- First rank of each warrior skill in Classic: level, spell ID (for name/icon), English name
@@ -278,8 +279,12 @@ ns.AddSection(20, function(add, level)
     local points = ns.db.talentReminder and ns.UnspentTalentPoints and ns.UnspentTalentPoints() or 0
     if points > 0 then
         add.note(format("|cffffd200%d talent point%s to spend|r  |cff999999- press N|r", points, points == 1 and "" or "s"))
+        local suggestion, why = ns.NextTalentText()
+        if suggestion then add.note(suggestion, nil, nil, why) end
     end
-    if #pending == 0 then
+    if #Skills() == 0 then
+        add.note(KNOWN_SKILLS_NONE)
+    elseif #pending == 0 then
         add.note("|cff6fdc6fUp to date|r  |cff999999- nothing new to train|r")
     else
         add.note(format("|cffffd200%d skill%s waiting at your trainer:|r", #pending, #pending == 1 and "" or "s"))
@@ -294,25 +299,6 @@ ns.AddSection(20, function(add, level)
             end
         end
     end
-end)
-
-ns.AddSection(25, function(add, level)
-    if not ns.db.showQuests or playerClass ~= "WARRIOR" then return end
-    local notes = {}
-    if level >= 10 and not Safe(IsPlayerSpell, DEFENSIVE_STANCE) then
-        notes[#notes + 1] = ns.IconText(Safe(ns.SpellIcon, DEFENSIVE_STANCE))
-            .. "Defensive Stance isn't learned yet - ask your warrior trainer about the class quest."
-    end
-    if level >= 30 and not Safe(IsPlayerSpell, BERSERKER_STANCE) then
-        notes[#notes + 1] = ns.IconText(Safe(ns.SpellIcon, BERSERKER_STANCE))
-            .. "Berserker Stance isn't learned yet - ask your warrior trainer about the class quest."
-    end
-    if level >= 30 and level < 35 then
-        notes[#notes + 1] = "|cffff9933Whirlwind weapon quest|r unlocks at 30 - a big two-hander upgrade for levelling."
-    end
-    if #notes == 0 then return end
-    add.header("Class quests")
-    for _, text in ipairs(notes) do add.note(text) end
 end)
 
 ns.AddSection(30, function(add, level)

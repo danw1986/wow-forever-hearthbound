@@ -190,7 +190,7 @@ local function OnLevelUp(_, newLevel)
     if newLevel == max then
         ns.Milestone("level:" .. newLevel, format("Level %d!", newLevel), "You made it to the top. Congratulations!", ICON_LEVEL)
     elseif newLevel == 40 then
-        ns.Milestone("level:40", "Mount time!", "Level 40 - visit your riding trainer.", ICON_MOUNT)
+        ns.Milestone("level:40", "Mount time!", ns.MountReminderText(), ICON_MOUNT)
     elseif newLevel % 10 == 0 then
         ns.Milestone("level:" .. newLevel, format("Level %d!", newLevel), format("%d levels to go.", max - newLevel), ICON_LEVEL)
     end
@@ -234,7 +234,7 @@ ns.MILESTONE_STEPS = { levels = LEVEL_STEPS, quests = QUEST_STEPS, kills = KILL_
 ns.MILESTONE_ICONS = { levels = ICON_LEVEL, mount = ICON_MOUNT, quests = ICON_QUEST, kills = ICON_KILL, xp = ICON_XP }
 
 function ns.TestToast()
-    queue[#queue + 1] = { title = "Mount time!", text = "Level 40 - visit your riding trainer.", icon = ICON_MOUNT }
+    queue[#queue + 1] = { title = "Mount time!", text = ns.MountReminderText(), icon = ICON_MOUNT }
     ns.ShowNextToast()
 end
 

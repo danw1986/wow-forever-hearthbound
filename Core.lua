@@ -461,7 +461,10 @@ SlashCmdList.HEARTHBOUND = function(input)
         end
     elseif cmd == "guide" or cmd:find("^guide ") then
         ns.GuideCommand(cmd:sub(7))
+    elseif cmd == "spec" or cmd:find("^spec ") then
+        ns.SpecCommand(cmd:sub(6))
     elseif cmd == "help" then
+        ns.Print("/hb spec | spec <name> | spec auto - the spec rewards and talent advice follow")
         ns.Print("/hb - open settings")
         ns.Print("/hb setup - run the first-time setup again")
         ns.Print("/hb cards - your enemy card collection, zone by zone")

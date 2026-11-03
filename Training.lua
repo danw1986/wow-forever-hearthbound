@@ -31,7 +31,7 @@ end
 local WEAPON_SKILLS = {
     [0] = "Axes", [1] = "Two-Handed Axes", [2] = "Bows", [3] = "Guns", [4] = "Maces", [5] = "Two-Handed Maces",
     [6] = "Polearms", [7] = "Swords", [8] = "Two-Handed Swords", [10] = "Staves", [13] = "Fist Weapons",
-    [15] = "Daggers", [16] = "Thrown", [18] = "Crossbows",
+    [15] = "Daggers", [16] = "Thrown", [18] = "Crossbows", [19] = "Wands",
 }
 
 -- skill name -> rank, max
@@ -82,7 +82,9 @@ table.insert(ns.inits, function()
     ns.On("PLAYER_LEVEL_UP", function()
         C_Timer.After(1.5, function()
             if ns.db.talentReminder and ns.UnspentTalentPoints() > 0 and ns.Toast then
-                ns.Toast("Talent point ready!", format("You have %d to spend - press N.", ns.UnspentTalentPoints()),
+                local pick, label = ns.NextTalentPick()
+                ns.Toast("Talent point ready!", pick and format("Suggested for %s: %s - press N.", label, pick.t)
+                    or format("You have %d to spend - press N.", ns.UnspentTalentPoints()),
                     "Interface\\Icons\\Ability_Marksmanship")
             end
         end)
