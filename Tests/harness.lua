@@ -164,6 +164,7 @@ ns._dbg = {
     group = function() return StepGroup() end,
     groupTitle = function() return GroupTitle(StepGroup()) end,
     why = function(j) local s = list[j] return LevelBlocked(s), Low(s), Orphan(s, j), GameDone(s) end,
+    goalLine = function(s) return K.GoalLine(s) end,
     whenHolds = function(s) return K.WhenHolds(s) end,
     places = function() return K.SectionPlaces() end,
     stepPlace = function(d) K.StepPlace(d) end,
