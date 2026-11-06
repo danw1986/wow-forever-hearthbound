@@ -28,6 +28,7 @@ tools into one window, and keeps a record of each character's journey to 60.
 - Detours, "on the way" quests near your route, quest log tidy-up, and a guide
   that learns from your play
 - Guide panel with every zone and section of the route
+- Quests that are new in WoW Forever are marked NEW, and each zone shows how many it has
 
 **Built around your character**
 - Recognises your class and spec: the talent tree with the most points, or the
@@ -144,4 +145,4 @@ images and aren't covered by this licence.
 
 ## Version
 
-0.9.2
+0.9.3
