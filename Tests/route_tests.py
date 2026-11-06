@@ -234,6 +234,26 @@ ns.cdb.quests[999999] = L.table_from({"title": s_.name})
 W.time = W.time + 1
 check("a quest of the same name handed in under another ID counts", ns._dbg.why(k)[3])
 
+# > on the step card through a section never sends you back: a place whose only step doesn't
+# apply to you (Chen's Empty Keg, unless it's in your log), then a note, used to snap back to
+# the last step you'd landed on
+L, W, ns = fresh(race="Orc", raceId=2, level=19)
+ns.db.guideListLayout = False
+ns.GuideFollowSection("The Barrens (19-23)")
+W.tick()
+places, back = [ns._dbg.places()[0]], None
+for press in range(30):
+    ns._dbg.stepPlace(1)
+    W.tick()
+    s_, j, _ = ns.GuideCurrent()
+    if s_.section != "The Barrens (19-23)":
+        break
+    at = ns._dbg.places()[0]
+    if at < places[-1] and back is None:
+        back = (places[-1], at, s_.name or s_.text)
+    places.append(at)
+check("pressing > on the card goes forward through the Barrens, never back", back is None and len(places) > 12, (back, places[:16]))
+
 # 8. what the import has to get right
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)

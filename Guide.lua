@@ -1239,6 +1239,9 @@ local function Go(index, mode)
     else
         state.hold = false
         state.pos = list[index].i
+        -- the step you'd picked before is behind you now: a note (which is never
+        -- picked) mustn't leave it in charge, or the guide snaps back to it
+        state.force = nil
         if not Done(list[index]) then Want(list[index]) end
         Advance()
     end
