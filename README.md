@@ -33,7 +33,6 @@ tools into one window, and keeps a record of each character's journey to 60.
 - Recognises your class and spec: the talent tree with the most points, or the
   one you choose with `/hb spec`, for all nine classes
 - Quest rewards scored for your spec, leaving out armour and weapons you can't use
-- Suggests your next talent from a levelling plan for your spec
 - Reminds you of your class's quest chains as they open, like druid forms, hunter
   pets, warlock demons, shaman totems, rogue poisons and mage teleports
 - Warns about what your class runs on: drink, arrows and bullets, soul shards,
@@ -145,4 +144,4 @@ images and aren't covered by this licence.
 
 ## Version
 
-0.9.0
+0.9.1
