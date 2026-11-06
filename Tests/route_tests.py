@@ -254,6 +254,25 @@ for press in range(30):
     places.append(at)
 check("pressing > on the card goes forward through the Barrens, never back", back is None and len(places) > 12, (back, places[:16]))
 
+# Forever's new quests are marked NEW wherever the guide names them; Classic's aren't
+L, W, ns = fresh(race="Skyborne", raceId=96, level=1)
+lst = ns._dbg.list()
+fresh_q = next(lst[k] for k in range(1, len(lst) + 1) if lst[k].t == "A" and lst[k].foreverOnly)
+old_q = None
+L2, W2, ns2 = fresh(race="Orc", raceId=2, level=1)
+lst2 = ns2._dbg.list()
+old_q = next(lst2[k] for k in range(1, len(lst2) + 1) if lst2[k].t == "A" and not lst2[k].foreverOnly)
+check("a new Forever quest: NEW in the step title", "NEW" in ns.GuideStepTitle(fresh_q), ns.GuideStepTitle(fresh_q))
+check("...and on the card's goal line", "NEW" in ns._dbg.goalLine(fresh_q), ns._dbg.goalLine(fresh_q))
+check("a Classic quest: no NEW in either", "NEW" not in ns2.GuideStepTitle(old_q) and "NEW" not in ns2._dbg.goalLine(old_q),
+      (ns2.GuideStepTitle(old_q), ns2._dbg.goalLine(old_q)))
+groups = {g.name: g for g in ns.GuideSectionGroups(True).values()}
+zeph = groups.get("Zephras Isle (1-14)")
+check("the zone overview counts Zephras Isle's new quests", zeph and 0 < zeph.newQuests <= zeph.quests, zeph and (zeph.newQuests, zeph.quests))
+groups2 = {g.name: g for g in ns2.GuideSectionGroups(True).values()}
+dur = groups2.get("Durotar (1-12)")
+check("...and Durotar's, fewer of them", dur and dur.newQuests < dur.quests, dur and (dur.newQuests, dur.quests))
+
 # 8. what the import has to get right
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)

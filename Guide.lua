@@ -1938,8 +1938,12 @@ end
 
 local function Q(name) return "|cffffd200" .. (name or "?") .. "|r" end
 
+-- a quest that's new in WoW Forever (not in Classic Era)
+K.NEW = "|cff33ff99NEW|r "
+local function New(s) return s.foreverOnly and K.NEW or "" end
+
 function Title(s)
-    local badge = (s.classQuest and "|cffc79c6eClass|r " or "") .. (s.foreverOnly and "|cff33ff99NEW|r " or "")
+    local badge = (s.classQuest and "|cffc79c6eClass|r " or "") .. New(s)
         .. (s.group and "|cffff6644Group|r " or "") .. ((s.lowValue or s.optional) and "|cff999999optional|r " or "")
     local t = s.t
     local text
@@ -3039,7 +3043,8 @@ function Refresh()
                 for _, j2 in ipairs(group) do
                     local g = list[j2]
                     local xp2 = g.t == "T" and StepXP(g)
-                    items[#items + 1] = (Done(g) and "|cff6fdc6f+ " or "|cffffffff- ") .. (g.t == "A" and "Pick up " or "Hand in ") .. (g.name or "?") .. "|r"
+                    items[#items + 1] = (Done(g) and "|cff6fdc6f+ " or "|cffffffff- ") .. New(g) .. (Done(g) and "|cff6fdc6f" or "|cffffffff")
+                        .. (g.t == "A" and "Pick up " or "Hand in ") .. (g.name or "?") .. "|r"
                         .. (xp2 and format("  |cff6fdc6f+%s|r", ns.Short and ns.Short(xp2) or xp2) or "")
                 end
                 details = table.concat(items, "\n") .. "\n" .. details
@@ -3150,16 +3155,16 @@ K.GOAL_ICONS = { Kill = I .. "Ability_Warrior_Rampage", Collect = I .. "INV_Misc
 function K.GoalLine(st)
     local name = "|cffa8c4ff%s|r"
     local t = st.t
-    if t == "A" then return "Accept " .. Q(st.name) end
+    if t == "A" then return New(st) .. "Accept " .. Q(st.name) end
     if t == "T" then
         local xp = StepXP(st)
-        return (StillToDo(st) and "Progress " .. Q(st.name) .. " |cff999999(then hand it in)|r" or "Turn in " .. Q(st.name))
+        return New(st) .. (StillToDo(st) and "Progress " .. Q(st.name) .. " |cff999999(then hand it in)|r" or "Turn in " .. Q(st.name))
             .. (xp and format("  |cff6fdc6f+%s|r", ns.Short and ns.Short(xp) or xp) or "")
     end
     if t == "C" then
         if st.gv then return st.gv .. " " .. format(name, st.gw or "") end
         if st.note and #st.note <= 60 and not st.note:find("\n") then return st.note end
-        return "Progress " .. Q(st.name)
+        return New(st) .. "Progress " .. Q(st.name)
     end
     if t == "G" then return "Go to " .. format(name, st.text or "") end
     if t == "F" then return "Fly to " .. format(name, st.text or "") end
@@ -4276,7 +4281,7 @@ function ns.GuideSectionGroups(fresh)
     for _, sec in ipairs(sections) do
         local g = byName[sec.name]
         if not g then
-            g = { name = sec.name, zone = sec.zone, steps = 0, done = 0, left = 0, quests = 0, qs = {}, zones = {},
+            g = { name = sec.name, zone = sec.zone, steps = 0, done = 0, left = 0, quests = 0, newQuests = 0, qs = {}, zones = {},
                   skipped = skipZones[sec.name] and true or false, class = sec.name:find("^Class ") ~= nil }
             byName[sec.name] = g
             out[#out + 1] = g
@@ -4284,7 +4289,10 @@ function ns.GuideSectionGroups(fresh)
         for j = sec.first, sec.last do
             local st = list[j]
             g.steps = g.steps + 1
-            if st.q and not g.qs[st.q] then g.qs[st.q], g.quests = true, g.quests + 1 end
+            if st.q and not g.qs[st.q] then
+                g.qs[st.q], g.quests = true, g.quests + 1
+                if st.foreverOnly then g.newQuests = g.newQuests + 1 end
+            end
             if st.zoneName and not g.zones[st.zoneName] then
                 g.zones[st.zoneName] = true
                 g.zones[#g.zones + 1] = st.zoneName
