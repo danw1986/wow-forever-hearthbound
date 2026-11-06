@@ -150,11 +150,15 @@ check("/hb spec auto: back to your talents", ns.PlayerSpec()[0] == "discipline")
 L.globals().SlashCmdList.HEARTHBOUND("spec nonsense")
 check("/hb spec nonsense: nothing changes", ns.PlayerSpec()[0] == "discipline")
 
-# 3. the next talent comes from your spec's plan
+# 3. the next talent comes from your spec's plan - paused until the plans are ready
 L, ns, fire, _ = play("MAGE", level=12)
 share_data(L, ns)
 trees(L, "MAGE", [0, 0, 2])
 ns.ForgetSpec()
+L.globals().W.unspent = 1
+check("talent plans are paused: no suggestion", ns.NextTalentPick() is None
+      and not any("Suggested" in l for l in section(L, ns, 20, 12)))
+ns.talentPlansReady = True
 pick = ns.NextTalentPick()[0]
 want = ns.CLASS_DATA.MAGE.builds.frost.picks[3]
 check("two points in Frost: the plan's third pick is next", pick.t == want.t and pick.tree == want.tree, pick.t)
@@ -162,6 +166,7 @@ L.globals().W.unspent = 1
 lines = section(L, ns, 20, 12)
 check("the trainer section suggests it, with your spec", any(want.t in l and "Frost" in l for l in lines), lines)
 L, ns, fire, _ = play("MAGE", level=12)
+ns.talentPlansReady = True
 L.globals().W.unspent = 1
 check("a client that can't count talents: no made-up advice", not any("Suggested" in l for l in section(L, ns, 20, 12)))
 
