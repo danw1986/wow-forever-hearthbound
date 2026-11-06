@@ -157,9 +157,14 @@ end
 ---------------------------------------------------------------------------
 -- Talents
 ---------------------------------------------------------------------------
+-- Paused: the plans' own authors say they aren't ready to recommend picks yet.
+-- Turn this on again when they are (and re-import ClassData.lua).
+ns.talentPlansReady = false
+
 -- the next talent on your spec's plan, if your points are the client's to tell:
 -- pick { t = talent, tree, r = rank, n = why }, your spec's name
 function ns.NextTalentPick()
+    if not ns.talentPlansReady then return nil end
     local data = Data()
     local key, label, _, spent = ns.PlayerSpec()
     local build = data and key and data.builds[key]

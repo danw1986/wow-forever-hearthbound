@@ -40,7 +40,7 @@ check("a tauren-only quest isn't for an orc", not orc(32) and tauren(32))
 both = DB["92474"]["requiredRaces"]  # Falling With Style: both factions' Skyborne
 check("a both-factions Skyborne quest is for a Horde Skyborne", sky(both), both)
 check("...but not for a tauren", not tauren(both), both)
-check("an Alliance-only Skyborne quest isn't for a Horde Skyborne", not sky(2 ** 34))
+check("an Alliance-only Skyborne quest isn't for a Horde Skyborne", not sky(2 ** 32))  # QuestieDB's Alliance Skyborne bit
 check("warrior class bit", mask_t(1, 1) and not mask_t(1, 3))
 
 print()

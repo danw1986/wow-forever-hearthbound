@@ -691,8 +691,8 @@ end
 -- instead: a quest for "any Horde race" is one for you too
 local CLASSIC_RACE_BITS = 0xFF
 local FACTION_RACES = { Alliance = 1 + 4 + 8 + 64, Horde = 2 + 16 + 32 + 128 }
--- Forever's Skyborne in QuestieDB's masks: bit 33 Horde, bit 34 Alliance
-local SKYBORNE_BIT = { Horde = 33, Alliance = 34 }
+-- Forever's Skyborne in QuestieDB's masks: bit 33 Horde, bit 32 Alliance
+local SKYBORNE_BIT = { Horde = 33, Alliance = 32 }
 
 local function FitsRace(mask)
     if type(mask) ~= "number" or mask == 0 then return true end
