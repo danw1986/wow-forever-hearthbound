@@ -45,6 +45,7 @@ ns.defaults = {
     talentReminder = true,
     weaponSkillTips = true,
     leaveTownAlert = true,
+    showLeftBehind = false, -- the Left behind section in the panel (the alert and /hb left don't need it)
     showTravel = true,
     mobXPTips = true,
     showSupplies = true,

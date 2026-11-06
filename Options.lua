@@ -376,6 +376,7 @@ local function BuildSettingsPage(page)
     col:Check("Grind spots", "showGrind",
         "When quests run dry: the best mobs to kill in your zone for your level. Click one to mark the nearest.")
     col:Check("Travel", "showTravel", "Your hearthstone, and flight paths in this zone you haven't learned (open a flight map once first).")
+    col:Check("Left behind", "showLeftBehind", "Lists the quests you walked away from: click one to mark it, right-click to forget it.")
     col:Check("Supplies & bag space", "showSupplies", "Warns when food runs low, there's better food for your level, or your bags are nearly full.")
     col:Check("Repair warning", "showGear", "Shows your most worn gear and warns in chat when it gets low.")
     col:Check("Weapon skill warning", "weaponSkillTips", "Warns when the skill for a weapon you're using is behind for your level.")
@@ -465,7 +466,7 @@ local function BuildSettingsPage(page)
     col:Check("Raid markers on quest targets", "targetSkull",
         "Clicking a mob in the quest targets window also marks it: skull for the first row, then cross, square, moon, triangle and diamond.")
     col:Check("Don't leave yet alert", "leaveTownAlert",
-        "Warns when you walk away from quests you could pick up or hand in, and lists them under Left behind.")
+        "Warns when you walk away from quests you could pick up or hand in. /hb left lists them.")
     col:Header("Tooltips and chat")
     col:Check("Quest mob tooltips", "mobQuestTips",
         "Hover a mob to see which of your quests want it: kills (3/10) and the quest items it drops.")

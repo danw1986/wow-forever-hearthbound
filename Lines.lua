@@ -6,7 +6,13 @@ local ADDON_NAME, ns = ...
 local LIST_LABEL_W = 40
 
 -- x: left offset inside parent, width: usable width
-function ns.CreateLineView(parent, x, width)
+-- look (optional): the room around lines, in pixels - row, noteGap, listGap, headerAbove,
+-- header, sectionGap (above a line marked sectionStart) and textSpacing (between wrapped lines)
+function ns.CreateLineView(parent, x, width, look)
+    look = look or {}
+    local ROW, NOTE_GAP, LIST_GAP = look.row or 15, look.noteGap or 3, look.listGap or 4
+    local HEADER_ABOVE, HEADER = look.headerAbove or 7, look.header or 15
+    local SECTION_GAP = look.sectionGap or 0
     local view = { lines = {}, pool = {} }
     local lines = view.lines
     local add = {}
@@ -72,6 +78,10 @@ function ns.CreateLineView(parent, x, width)
             l = { a = ns.Text(parent, 11), b = ns.Text(parent, 11), rule = parent:CreateTexture(nil, "ARTWORK") }
             l.a:SetJustifyV("TOP")
             l.b:SetJustifyV("TOP")
+            if look.textSpacing then
+                l.a:SetSpacing(look.textSpacing)
+                l.b:SetSpacing(look.textSpacing)
+            end
             l.rule:SetColorTexture(0.78, 0.61, 0.43, 0.25)
             l.rule:SetHeight(1)
             view.pool[i] = l
@@ -169,6 +179,10 @@ function ns.CreateLineView(parent, x, width)
             b:ClearAllPoints()
             a:SetWidth(0)
             b:SetWidth(0)
+            if l.clipped then
+                a:SetWordWrap(true)
+                l.clipped = nil
+            end
             a:Show()
             b:Show()
             l.rule:Hide()
@@ -176,8 +190,9 @@ function ns.CreateLineView(parent, x, width)
             if l.click then l.click:Hide() end
             HideItems(l)
 
+            if line.sectionStart and i > 1 then y = y - SECTION_GAP end
             if line.kind == "header" then
-                y = y - 7
+                y = y - HEADER_ABOVE
                 Style(a, 10, ns.color.gold)
                 a:SetJustifyH("LEFT")
                 a:SetPoint("TOPLEFT", x, y)
@@ -193,7 +208,7 @@ function ns.CreateLineView(parent, x, width)
                 l.rule:SetWidth(math.max(4, width - a:GetStringWidth() - 6))
                 l.rule:Show()
                 if line.onClick then ClickArea(l, line, y, 16) end
-                y = y - 15
+                y = y - HEADER
             elseif line.kind == "row" then
                 Style(a, 11, ns.color.dim)
                 Style(b, 11, ns.color.text)
@@ -203,7 +218,14 @@ function ns.CreateLineView(parent, x, width)
                 b:SetPoint("TOPRIGHT", parent, "TOPLEFT", x + width, y)
                 a:SetText(line.left)
                 b:SetText(line.right)
-                y = y - 15
+                -- a long label is cut short, not run into the value beside it
+                local room = width - b:GetStringWidth() - 8
+                if room > 0 and a:GetStringWidth() > room then
+                    a:SetWidth(room)
+                    a:SetWordWrap(false)
+                    l.clipped = true
+                end
+                y = y - ROW
             elseif line.kind == "note" then
                 Style(a, 11, line.color or ns.color.text)
                 a:SetJustifyH("LEFT")
@@ -212,7 +234,7 @@ function ns.CreateLineView(parent, x, width)
                 a:SetText(line.text)
                 b:Hide()
                 if line.onClick then ClickArea(l, line, y, a:GetStringHeight() + 4) end
-                y = y - a:GetStringHeight() - 3
+                y = y - a:GetStringHeight() - NOTE_GAP
             elseif line.kind == "list" then
                 Style(a, 11, ns.color.gold)
                 Style(b, 11, ns.color.text)
@@ -224,7 +246,7 @@ function ns.CreateLineView(parent, x, width)
                 b:SetPoint("TOPLEFT", x + LIST_LABEL_W + 4, y)
                 a:SetText(line.left)
                 b:SetText(line.right)
-                y = y - math.max(a:GetStringHeight(), b:GetStringHeight()) - 4
+                y = y - math.max(a:GetStringHeight(), b:GetStringHeight()) - LIST_GAP
             elseif line.kind == "items" then
                 a:Hide()
                 b:Hide()

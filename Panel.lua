@@ -9,6 +9,8 @@ local WIDTH = 250
 local PAD = 10
 local INNER = WIDTH - PAD * 2
 local TOP = -50
+-- room in the panel: sections stand apart even in compact, which has no headings
+local LOOK = { row = 16, noteGap = 4, listGap = 5, headerAbove = 8, header = 16, sectionGap = 8, textSpacing = 2 }
 
 ---------------------------------------------------------------------------
 -- Formatting
@@ -319,8 +321,11 @@ function ns.UpdatePanel()
     view:Begin()
     for _, section in ipairs(ns.OrderedSections()) do
         local writer = SectionWriter()
+        local before = #view.lines
         local ok, err = pcall(section.build, writer, level)
         if ok then ok, err = pcall(writer.flush) end
+        local first = view.lines[before + 1]
+        if first then first.sectionStart = true end
         if not ok and not reported[section] then
             reported[section] = true -- once, rather than every second
             ns.Print("|cffff5544Panel error:|r " .. tostring(err))
@@ -364,7 +369,7 @@ local function Build()
     thumb:SetWidth(3)
     thumb:SetColorTexture(ns.color.accent[1], ns.color.accent[2], ns.color.accent[3], 0.7)
     thumb:Hide()
-    view = ns.CreateLineView(content, PAD, INNER)
+    view = ns.CreateLineView(content, PAD, INNER, LOOK)
 
     local accent = frame:CreateTexture(nil, "ARTWORK")
     accent:SetColorTexture(unpack(ns.color.accent))
