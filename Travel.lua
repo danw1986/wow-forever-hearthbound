@@ -191,7 +191,7 @@ local function CheckLeaving()
     Remember(left, "handin", stillHandins, left.handins, added)
     Remember(left, "pickup", stillPickups, left.pickups, added)
     if ns.Toast then
-        ns.Toast("Leaving " .. left.place .. "?", "You left " .. summary .. " behind - see Left behind in the panel.",
+        ns.Toast("Leaving " .. left.place .. "?", "You left " .. summary .. " behind - /hb left lists them.",
             "Interface\\Icons\\INV_Misc_Note_02")
     end
     ns.Print(format("|cffffd200Leaving %s?|r You left %s behind:", left.place, summary))
@@ -199,7 +199,7 @@ local function CheckLeaving()
         ns.Print(format("  %s %s |cffffd200%s|r - %s", LINK:format(e.n), e.kind == "pickup" and "Pick up" or "Hand in",
             e.title, Where(e)))
     end
-    ns.Print("  Click |cff33ff99[Mark]|r, a line under |cffffd200Left behind|r in the panel, or |cffc79c6e/hb left|r.")
+    ns.Print("  Click |cff33ff99[Mark]|r, or |cffc79c6e/hb left|r to list them.")
     if ns.UpdatePanel then ns.UpdatePanel() end
 end
 
@@ -281,9 +281,9 @@ ns.AddSection(27, function(add)
     end
 end)
 
--- the Left behind list in the panel: click to mark, right-click to forget
+-- the Left behind list in the panel, if you want it: click to mark, right-click to forget
 ns.AddSection(28, function(add)
-    if not ns.db.leaveTownAlert then return end
+    if not ns.db.showLeftBehind then return end
     local list = LeftList()
     if #list == 0 then return end
     add.header("Left behind")
