@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: |cffc79c6eHearthbound|r - Leveling
 ## Notes: Levelling companion: XP panel, road to 60, trainer and quest log reminders, gold, quest history, stats, milestones, deaths and alts. Type /hb for settings.
-## Version: 0.9.0
+## Version: 0.9.1
 ## IconTexture: Interface\Icons\Ability_Warrior_BattleShout
 ## OptionalDeps: Questie, QuestieDB
 ## SavedVariables: HearthboundDB
