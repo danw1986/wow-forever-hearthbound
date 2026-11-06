@@ -135,7 +135,7 @@ check("...without being sent out of the village first", not far, far)
 # 5. following a zone starts at its first step left to do - not at an old bookmark at its end
 L, W, ns = fresh(race="Orc", raceId=2, level=24)
 lst = ns._dbg.list()
-sec = "Hillsbrad Foothills, Undercity & The Barrens (25-27)"
+sec = "Hillsbrad Foothills & The Barrens (25-27)"
 ks = [k for k in range(1, len(lst) + 1) if lst[k].section == sec]
 st = ns._dbg.state()
 st.zoneMarks = L.table_from({"Hillsbrad Foothills": lst[ks[-1]].i})
@@ -238,10 +238,10 @@ check("a quest of the same name handed in under another ID counts", ns._dbg.why(
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)
 check("no deathskips: they're opt-in upstream, and never on Hardcore", "Deathskip" not in data)
-check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.0 (guides/forever), GPL-3.0-only" in data)
+check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.2 (guides/forever), GPL-3.0-only" in data)
 # Mulgore is one of the maps Forever redrew: typed in Era's frame, converted to Forever's
 check("a typed Mulgore point lands where it is on Forever's map", 'text="The Venture Co. Mine", z=215, x=61.19, y=49.31' in data)
-for race, rid, want in (("Orc", 2, "The Barrens (12-12)"), ("Troll", 8, "The Barrens (12-12)"), ("Tauren", 6, "The Barrens (12-16)")):
+for race, rid, want in (("Orc", 2, "The Barrens (12-16)"), ("Troll", 8, "The Barrens (12-16)"), ("Tauren", 6, "The Barrens (12-16)")):
     L, W, ns, lst = playing(race=race, raceId=rid)
     secs = [lst[k].section for k in range(1, len(lst) + 1)]
     check(f"{race} goes from the start zone to {want}", want in secs and secs[0].split(" (")[0] in ("Durotar", "Mulgore"), secs[0])
