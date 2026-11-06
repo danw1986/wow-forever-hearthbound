@@ -273,6 +273,21 @@ groups2 = {g.name: g for g in ns2.GuideSectionGroups(True).values()}
 dur = groups2.get("Durotar (1-12)")
 check("...and Durotar's, fewer of them", dur and dur.newQuests < dur.quests, dur and (dur.newQuests, dur.quests))
 
+# clicking a step marks that step on the map - not a nearby detour the arrow may be showing
+L, W, ns = fresh(race="Orc", raceId=2, level=22)
+L.execute("""WAYPOINTS = {}
+HARNESS_NS.SetWaypoint = function(mapID, x, y, label) table.insert(WAYPOINTS, { label = tostring(label), x = x, y = y }) end""")
+W.pos = L.table_from({1: 51.8, 2: 30.6})
+W.detours = L.eval("""{ nearby = { { kind = "turnin", quest = 999001, title = "Some Other Quest", label = "Innkeeper Boorand",
+    yards = 30, spot = { mapID = 17, x = 51.99, y = 29.77, continent = 1, wx = 51.99 * 60, wy = 29.77 * 60 } } }, class = {} }""")
+lst = ns._dbg.list()
+egg = next(k for k in range(1, len(lst) + 1) if lst[k].t == "A" and lst[k].q == 868)
+W.tick()
+L.eval("function(ns, k) WAYPOINTS = {} ns._dbg.state().force = ns._dbg.list()[k].i ns.GuidePick(k) end")(ns, egg)
+wp = list(L.globals().WAYPOINTS.values())
+got = (wp[-1].label, round(wp[-1].x, 2), round(wp[-1].y, 2)) if wp else None
+check("clicking Accept Egg Hunt marks Korran, not a nearby detour", got == ("Egg Hunt", 51.07, 29.63), got)
+
 # 8. what the import has to get right
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)

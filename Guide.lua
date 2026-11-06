@@ -1255,7 +1255,7 @@ end
 local function MarkStep()
     if not ns.SetWaypoint then return end
     UpdateDetours() -- work out the arrow's target for the step now on screen
-    local a = ArrowStep()
+    local a = ArrowStep(true) -- the step itself: not a nearby detour, class quest or marker the arrow may be on
     local t = a and Target(a)
     local x, y = t and (t.x or a.x), t and (t.y or a.y)
     if t and t.mapID and x and y then
@@ -1796,17 +1796,20 @@ local function DetourStep(d, why)
 end
 
 -- what the arrow points at: your own map marker, a class quest you chose, a
--- nearby detour, or the route
-function ArrowStep()
-    local m = ns.GuideMarker and ns.GuideMarker()
-    if m then return m end
-    if followKey and classDetour and DetourKey(classDetour) == followKey then
-        local st = DetourStep(classDetour, "Class: ")
-        if st then return st end
-    end
-    if nearbyDetour then
-        local st = DetourStep(nearbyDetour, "Nearby: ")
-        if st then return st end
+-- nearby detour, or the route. stepOnly: just the step on screen (the nearest
+-- thing it still needs, or where to pick it up), for marking the step you clicked
+function ArrowStep(stepOnly)
+    if not stepOnly then
+        local m = ns.GuideMarker and ns.GuideMarker()
+        if m then return m end
+        if followKey and classDetour and DetourKey(classDetour) == followKey then
+            local st = DetourStep(classDetour, "Class: ")
+            if st then return st end
+        end
+        if nearbyDetour then
+            local st = DetourStep(nearbyDetour, "Nearby: ")
+            if st then return st end
+        end
     end
     if objectiveDetour then
         local st = DetourStep(objectiveDetour, "")
