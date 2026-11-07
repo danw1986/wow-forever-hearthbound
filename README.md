@@ -22,9 +22,11 @@ tools into one window, and keeps a record of each character's journey to 60.
 
 **Levelling guide**
 - Walks the Horde 1-60 route one step at a time. Steps tick off as you accept,
-  finish and hand in quests, reach a spot, fly, hearth, train or enter a dungeon
+  finish and hand in quests, reach a spot, fly, set your hearth, train or enter a dungeon
 - Movable arrow with distance to the next step, numbered map pins, and a quest
   item button for steps that need an item used
+- Says when your hearthstone would get you to the next step sooner, and by how
+  many minutes
 - Detours, "on the way" quests near your route, quest log tidy-up, and a guide
   that learns from your play
 - Guide panel with every zone and section of the route
@@ -145,4 +147,4 @@ images and aren't covered by this licence.
 
 ## Version
 
-0.9.4
+0.9.5
