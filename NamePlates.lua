@@ -5,7 +5,8 @@ local ADDON_NAME, ns = ...
 -- Nameplates and Plater do it - so nothing of the game's look clashes with it.
 --   the name line: the level (coloured like quest difficulty, + elite, R rare), then the name
 --   the health bar: flat, on the addon's dark panel colour, crisp 1px border, faint sheen,
---     in soft reaction colours (class colours for players); health % inside when hurt
+--     in soft reaction colours (class colours for players); health % inside when hurt.
+--     In a fight it takes the threat colour (a setting), so aggro shows at a glance
 --   the threat bar under it, in a fight: red - you have aggro, yellow - you're losing
 --     it (or about to pull it off someone), green - it's on someone else
 --   the cast bar under that: the spell's icon and name (gold - you can interrupt it)
@@ -785,6 +786,15 @@ local function Update(unit, what)
         end
         d.status = status
         PaintThreat(d.threat, status, pct)
+        -- the health bar in the threat colour; its own colour back once the fight's over
+        if status and On("threatHealth") then
+            local c = COLOURS[status]
+            d.hp:SetStatusBarColor(c[1], c[2], c[3])
+            d.threatTinted = true
+        elseif d.threatTinted then
+            d.threatTinted = nil
+            Try(Colour, d, unit)
+        end
         if not (status == 1 or status == 2) then d.frame:SetAlpha(1) end -- (only yellow breathes)
         Border(d)
         d:Show()

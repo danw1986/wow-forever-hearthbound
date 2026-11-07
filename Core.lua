@@ -88,6 +88,7 @@ ns.defaults = {
     guideCompact = false,    -- the guide window shows only the current step
     hbPlates = true,          -- nameplates drawn in the addon's style (NamePlates.lua)
     threatPlates = true,         -- a threat bar under enemy nameplates in combat
+    threatHealth = true,         -- ...and the health bar in its colour, so aggro shows at a glance
     hideFrameThreat = true,      -- hide the game's red threat glow on your own unit frames
     threatPlatesText = true,     -- ...your threat % beside it, in a group
     threatPlatesDebuffs = false, -- your own debuffs above the name, instead of the game's

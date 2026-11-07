@@ -523,6 +523,8 @@ local function BuildSettingsPage(page)
         "Nameplates drawn in the addon's look: the level and name above a flat health bar on a dark panel with a crisp border, health %, the threat bar and the cast bar under it, your debuffs above, the raid marker beside it - and your target in gold, with the others dimmed. Off: the game's own nameplates, with just the threat bar under them.")
     col:Check("Threat bar under enemy nameplates", "threatPlates",
         "In combat, a thin bar under each enemy's nameplate, filled to your threat: red - you have aggro, yellow - you're losing it (or about to pull it off someone), green - it's on someone else. The plate itself isn't changed. Needs the game's enemy nameplates on (V). Try it: target an enemy and type /hb plates test.")
+    col:Check("Health bar in the threat colour", "threatHealth",
+        "In a fight, the enemy's health bar turns the threat bar's colour too: red - you have aggro, yellow - you're losing it, green - it's on someone else. (Hearthbound's nameplates only.)")
     col:Check("Hide the threat glow on my unit frames", "hideFrameThreat",
         "The game's own red glow (and threat number) on your player and target frames - hidden, so threat only shows on the enemies.")
     col:Check("Threat % in a group", "threatPlatesText", "Your threat %, left of the bar in its colour - in a group or with a pet out (solo it's always you).")

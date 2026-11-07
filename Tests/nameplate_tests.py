@@ -138,6 +138,24 @@ fire("UNIT_THREAT_LIST_UPDATE", "nameplate1")
 check("on someone else: green, 40% filled, 40% beside it in a group", rgb(d1.threat._color)[1] > 0.7 and d1.threat._value == 0.4
       and d1.threat.text._text == "40%")
 G.MOCK.group = False
+# the health bar takes the threat colour too, so aggro shows at a glance
+HOSTILE = (0.9, 0.22, 0.18)
+for status, word in ((3, "aggro: red"), (2, "losing it: yellow"), (0, "on someone else: green")):
+    G.MOCK.threat["nameplate1"] = L.table_from({1: status == 3, 2: status, 3: 100 if status else 40})
+    fire("UNIT_THREAT_LIST_UPDATE", "nameplate1")
+    check(f"health bar in the threat colour - {word}", rgb(d1.hp._color) == rgb(d1.threat._color),
+          (rgb(d1.hp._color), rgb(d1.threat._color)))
+G.MOCK.threat["nameplate1"] = None
+fire("UNIT_THREAT_LIST_UPDATE", "nameplate1")
+check("out of the fight: back to the enemy's own colour", rgb(d1.hp._color) == HOSTILE, rgb(d1.hp._color))
+ns.db.threatHealth = False
+G.MOCK.threat["nameplate1"] = L.table_from({1: True, 2: 3, 3: 100})
+fire("UNIT_THREAT_LIST_UPDATE", "nameplate1")
+check("setting off: the health bar keeps the enemy's colour, the threat line still shows", rgb(d1.hp._color) == HOSTILE
+      and d1.threat._shown, rgb(d1.hp._color))
+ns.db.threatHealth = True
+G.MOCK.threat["nameplate1"] = L.table_from({1: False, 2: 0, 3: 40})
+fire("UNIT_THREAT_LIST_UPDATE", "nameplate1")
 # casting
 G.MOCK.casts["nameplate2"] = L.table_from({1: "Lightning Bolt", 2: 136048, 3: False})
 fire("UNIT_SPELLCAST_START", "nameplate2")
