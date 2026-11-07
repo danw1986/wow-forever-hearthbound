@@ -392,6 +392,8 @@ local function BuildSettingsPage(page)
     col:Check("Skip quests too low for XP", "guideSkipGrey",
         "The guide passes quests that are grey for you (picked up in an area you've outlevelled). They stay in the route, greyed, and come back if you turn this off.")
     col:Check("Turn the arrow round", "guideArrowTurned", "Only if the arrow points the wrong way on your client.")
+    col:Check("Hearth when it's quicker", "guideHearthHint",
+        "When your hearthstone would get you to the next step a few minutes sooner than going there, the arrow and the step say so: \"Hearth to Ratchet: saves about 6 min\".")
     col:Check("Steps on the map", "guideMapPins",
         "The next few steps as numbered pins on the world map and minimap, joined by a dotted trail.")
     col:Check("Next step pop-up", "guideStepPopup", "A short note in the middle of the screen each time the guide moves on.")

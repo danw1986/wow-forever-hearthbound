@@ -214,7 +214,8 @@ def arr(v):
 def spawns(kind, id_):
     rec = {"npc": N, "object": O}[kind].get(str(id_)) or {}
     out = {}
-    for z, pts in (rec.get("spawns") or {}).items():
+    all_spawns = rec.get("spawns")
+    for z, pts in (all_spawns if isinstance(all_spawns, dict) else {}).items():
         good = [p for p in pts if isinstance(p, list) and len(p) >= 2 and p[0] is not None and p[0] >= 0]
         if good:
             out[int(z)] = good
@@ -693,6 +694,43 @@ steps = []
 for gid in order:
     place = Place()
     convert(guides[gid], place, steps)
+
+# ------------------------------------------------------------------ inns: where each "set your hearth" is
+# A sethome the guide gives no innkeeper for: the innkeeper it names for the same
+# town elsewhere, else the innkeeper nearest the stop's other steps. The hearth
+# hint on the guide card needs to know where every inn is.
+INN_KEEPERS_UNPREFIXED = (16256, 15174)  # Jessica Chambers (Light's Hope), Calandrath (Cenarion Hold)
+inn_of = {s["text"]: s for s in steps if s["t"] == "SH" and "x" in s}
+innkeepers = [k for k, v in N.items() if (v.get("name") or "").startswith("Innkeeper")] + [str(k) for k in INN_KEEPERS_UNPREFIXED]
+for n, s in enumerate(steps):
+    if s["t"] != "SH" or "x" in s:
+        continue
+    known = inn_of.get(s["text"])
+    if known:
+        s["z"], s["x"], s["y"], s["zoneName"] = known["z"], known["x"], known["y"], known.get("zoneName")
+        continue
+    near = [e for e in steps[max(0, n - 8):n + 9] if "x" in e and e.get("place") == s.get("place")]         or [e for e in steps[max(0, n - 4):n + 5] if "x" in e]
+    best, z = None, ZONE_ID.get(s["text"])
+    if z:  # a city: its own innkeeper
+        for k in innkeepers:
+            for p in spawns("npc", int(k)).get(z, [])[:1]:
+                best = best or (0, k, p)
+    elif near:
+        z = max({e["z"] for e in near}, key=lambda zz: sum(e["z"] == zz for e in near))
+        cx = sum(e["x"] for e in near if e["z"] == z) / sum(e["z"] == z for e in near)
+        cy = sum(e["y"] for e in near if e["z"] == z) / sum(e["z"] == z for e in near)
+        for k in innkeepers:
+            for p in spawns("npc", int(k)).get(z, []):
+                d = math.hypot(p[0] - cx, p[1] - cy)
+                if d < 8 and (not best or d < best[0]):
+                    best = (d, k, p)
+    if not best:
+        warnings.append(f"set hearth at {s['text']}: no innkeeper near the stop")
+        continue
+    s["z"], s["x"], s["y"], s["zoneName"] = z, round(best[2][0], 2), round(best[2][1], 2), ZONE_NAME.get(z)
+    s.setdefault("note", name_of("npc", int(best[1])))
+    inn_of[s["text"]] = s
+    print(f"inn: {s['text']} -> {name_of('npc', int(best[1]))} ({z} {s['x']}, {s['y']}) {best[0]:.1f} from the stop")
 
 # ------------------------------------------------------------------ checks and output
 placed = sum(1 for s in steps if "x" in s)

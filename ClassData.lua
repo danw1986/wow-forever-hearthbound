@@ -1,6 +1,6 @@
 -- Each class's specs and stat weights, class quest chains and talent plans.
 -- Rebuilt by Tests/class_import.py.
--- Adapted from github.com/fitzforge/polestar v0.3.0, GPL-3.0-only.
+-- Adapted from github.com/fitzforge/polestar v0.3.4, GPL-3.0-only.
 -- weights: per spec, one point of the main stat is about 1 (dps = melee weapon DPS, rdps = ranged).
 -- quests: min/max = levels; ends = the hand-ins that finish it (the first that fits your race);
 -- spells = what it teaches, also a sign it's done; gear = it pays gear too, so finish it anyway.
@@ -551,8 +551,8 @@ ns.CLASS_DATA = {
     quests = {
       {id="blade-of-cunning", title="Blade of Cunning", min=10, max=12, why="A dagger at 10 from your home town's rogue quests.", faction="Alliance", ends={{q=2242, races={"nightelf"}}, {q=2239, races={"dwarf", "gnome"}}, {q=2206, races={"human", "skyborne"}}}},
       {id="blade-of-cunning", title="Blade of Cunning", min=10, max=13, why="A dagger at 10 from your home town's rogue quests.", faction="Horde", ends={{q=1978, races={"scourge"}}, {q=1858, races={"orc", "troll"}}, {q=1859, races={"orc"}}}},
+      {id="certificate-of-thievery", title="Certificate of Thievery", min=16, max=20, why="Your first lockpicking job at 16: Lucius's lockbox at Alther's Mill, for SI:7.", faction="Alliance", ends={{q=2282}, {q=2260, races={"nightelf"}}, {q=2298, races={"dwarf", "gnome"}}, {q=2300, races={"human", "skyborne"}}}},
       {id="plundering-the-plunderers", title="Plundering the Plunderers", min=16, max=20, why="Ten Thistle Tea, the rogue energy drink, from the Horde lockpicking jobs at 16.", faction="Horde", ends={{q=1999, races={"scourge"}}, {q=2381}, {q=2380, races={"orc", "troll", "skyborne"}}}},
-      {id="certificate-of-thievery", title="Certificate of Thievery", min=16, max=22, why="Your first lockpicking job at 16: Lucius's lockbox at Alther's Mill, for SI:7, then Thistle Tea from Arantir.", faction="Alliance", ends={{q=2358}, {q=2260, races={"nightelf"}}, {q=2298, races={"dwarf", "gnome"}}, {q=2300, races={"human", "skyborne"}}}},
       {id="poisons", title="Poisons", min=20, max=24, why="Forever teaches Poisons through this chain, not the trainer; the Thistle Tea recipe comes with it.", faction="Alliance", spells={2842}, gear=true, ends={{q=2609}}},
       {id="poisons", title="Poisons", min=20, max=26, why="Forever teaches Poisons through this chain, not the trainer; the Thistle Tea recipe comes with it.", faction="Horde", spells={2842}, gear=true, ends={{q=2480}}},
       {id="the-horn-of-xelthos", title="The Horn of Xelthos", min=23, max=26, why="The Pyrewood Signet Ring, C's payment for a solo job inside Shadowfang Keep.", ends={{q=78307}}},
@@ -915,7 +915,6 @@ ns.CLASS_DATA = {
     quests = {
       {id="call-of-earth", title="Call of Earth", min=4, max=5, why="Your Earth Totem: without it no earth totem can be cast. Stoneskin Totem comes with it at level 4.", faction="Alliance", spells={8071}, gear=true, ends={{q=94375}}},
       {id="call-of-earth", title="Call of Earth", min=4, max=5, why="Your Earth Totem: without it no earth totem can be cast. Stoneskin Totem comes with it at level 4.", faction="Horde", spells={8071}, gear=true, ends={{q=92468, races={"skyborne"}}, {q=1521, races={"tauren"}}, {q=1518, races={"orc", "troll"}}}},
-      {id="stalk-with-the-earthmother", title="Stalk With The Earthmother", min=8, max=12, why="A one-hand blade or mace at 11 from Boarton Shadetotem's three tests in and around Thunder Bluff.", faction="Horde", races={"tauren"}, ends={{q=76240}}},
       {id="call-of-fire", title="Call of Fire", min=10, max=13, why="Your Fire Totem for every fire totem, Searing Totem with it, and Forever's Totem of Charged Flames.", faction="Horde", spells={3599}, gear=true, ends={{q=97257, races={"skyborne"}}, {q=1527, races={"orc", "troll", "tauren"}}}},
       {id="call-of-fire", title="Call of Fire", min=10, max=14, why="Your Fire Totem for every fire totem, Searing Totem with it, and Forever's Totem of Charged Flames.", faction="Alliance", spells={3599}, gear=true, ends={{q=94468}}},
       {id="call-of-water", title="Call of Water", min=20, max=23, why="The Water Totem that lets you place water totems, and Healing Stream Totem with it.", faction="Alliance", spells={5394}, gear=true, ends={{q=94505}}},

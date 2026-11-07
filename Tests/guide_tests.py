@@ -266,11 +266,15 @@ k = step_index(L, "T", 2161)  # A Peon's Burden at the Razor Hill inn
 ns._dbg.state().pos = lst[k].i
 W.log[2161] = "complete"
 W.bind = "Razor Hill"
-W.pos = L.table(44.0, 70.0)  # back in the Valley of Trials, ~1500 yards away
+W.items = L.table_from({6948: 1})  # a hearthstone
+W.pos = L.table(44.0, 70.0)  # back in the Valley of Trials, ~1700 yards away
 W.tick()
 d = ns._dbg.details(ns.GuideCurrent()[0])
 print("   ", " / ".join(d.splitlines())[:200])
-check("far from Razor Hill with the hearth there: suggests hearthing", "hearth to Razor Hill" in d, d)
+check("far from Razor Hill with the hearth there: suggests hearthing", "Hearth to Razor Hill:|r saves about 5 min" in d, d)
+W.items = L.table_from({})
+d = ns._dbg.details(ns.GuideCurrent()[0])
+check("...not without a hearthstone", "Hearth to" not in d, d)
 
 # 18. quest areas: distance goes by where the mobs are, not the step's one point
 L, W, ns = fresh(level=6)
