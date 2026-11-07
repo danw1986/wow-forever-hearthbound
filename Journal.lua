@@ -879,7 +879,13 @@ local function QuestSpec(q, dungeonKey)
     if q.place then who = who .. " - " .. q.place end
     local own = Markers(dungeonKey)["q:" .. q.title]
     local pickup = ns.QuestPickup(q.title)
-    local questie = ns.QuestieStart and ns.QuestieStart(q.title)
+    -- a quest from Questie's dungeon list knows its own giver; others are looked up by title
+    local questie
+    if q.fromQuestie then
+        questie = q.mapID and { giver = q.giver, mapID = q.mapID, x = q.x, y = q.y } or nil
+    else
+        questie = ns.QuestieStart and ns.QuestieStart(q.title)
+    end
     if questie and (not q.giver or q.giver == "?") and not own and not pickup then
         who = (questie.giver or "?") .. (q.place and " - " .. q.place or "") -- item starters have no position
     end
@@ -920,6 +926,25 @@ local function QuestSpec(q, dungeonKey)
     if not hasSpot and not q.inside then
         lines[#lines + 1] = "|cffa0a0a0No location known yet - stand next to the quest giver and press Set.|r"
     end
+    -- what has to come first, if you haven't done it
+    local needs = {}
+    local anyDone = #(q.pre or {}) == 0
+    for _, id in ipairs(q.pre or {}) do
+        if ns.QuestDone and ns.QuestDone(id) then anyDone = true end
+    end
+    if not anyDone then
+        local name = ns.QuestieQuestName and ns.QuestieQuestName(q.pre[1])
+        if name then needs[#needs + 1] = name .. (#q.pre > 1 and " (or another)" or "") end
+    end
+    for _, id in ipairs(q.preAll or {}) do
+        if not (ns.QuestDone and ns.QuestDone(id)) then
+            local name = ns.QuestieQuestName and ns.QuestieQuestName(id)
+            if name then needs[#needs + 1] = name end
+        end
+    end
+    if #needs > 0 and not status then
+        lines[#lines + 1] = "|cffff8844Do first: " .. table.concat(needs, ", ") .. "|r"
+    end
     if q.reward then lines[#lines + 1] = "|cff999999Reward: " .. q.reward .. "|r" end
     local finish = ns.QuestieFinish and ns.QuestieFinish(q.title, q.id)
     if finish and finish.giver then
@@ -940,13 +965,55 @@ local function QuestSpec(q, dungeonKey)
              spot = hasSpot and { mapID = mapID, x = x, y = y } or nil, who = who }
 end
 
--- Curated quests merged with the ones learned in game
+-- A quest from Questie's database as a journal entry: who gives it and where,
+-- or that it starts inside / from an item, and what has to come first
+local function QuestieEntry(id)
+    local info = ns.QuestieQuestInfo and ns.QuestieQuestInfo(id)
+    if not info then return nil end
+    local q = { title = info.title, level = info.level, id = id, questieId = id, fromQuestie = true,
+                requiredLevel = info.requiredLevel, pre = info.preSingle, preAll = info.preGroup }
+    local s = info.start
+    if s and s.mapID then
+        q.giver, q.mapID, q.x, q.y = s.giver, s.mapID, s.x, s.y
+        q.place = MapName(s.mapID)
+    elseif s then
+        q.giver, q.place, q.inside = s.giver, "Inside", true
+    elseif info.startItem then
+        q.giver, q.place, q.inside = "Item: " .. info.startItem, "drops inside", true
+    end
+    return q
+end
+
+-- Questie's quests for the dungeon first (the released game's data), then the
+-- published lists for anything it hasn't got, then quests learned in game
 local function BuildQuestList(d)
     local mine = ns.PlayerFaction()
     local learned = Journal().quests[d.key] or {}
     local list, seen = {}, {}
+    local fromQuestie = ns.QuestieDungeonQuestIds and ns.QuestieDungeonQuestIds(d.key)
+    local byTitle = {}
+    for _, id in ipairs(fromQuestie or {}) do
+        local fits = not ns.QuestieFitsYou or ns.QuestieFitsYou(id) ~= false
+        local q = fits and QuestieEntry(id)
+        local key = q and q.title:lower()
+        -- one entry per title for your faction (Questie has a version per side for some)
+        if q and not byTitle[key] then
+            list[#list + 1] = q
+            byTitle[key] = q
+            seen[q.title] = true
+        end
+    end
     for _, q in ipairs(d.quests or {}) do
-        if not q.faction or not mine or q.faction == mine then
+        local same = byTitle[q.title:lower()]
+        if same then
+            -- what only the published list says: the reward, a note on where
+            same.reward = same.reward or q.reward
+            if q.place and not same.mapID then same.place = q.place end
+            seen[q.title] = true
+        end
+    end
+    for _, q in ipairs(d.quests or {}) do
+        if not seen[q.title] and (not q.faction or not mine or q.faction == mine) then
             local copy = {}
             for k, v in pairs(q) do copy[k] = v end
             local l = learned[q.title]
@@ -962,19 +1029,6 @@ local function BuildQuestList(d)
             list[#list + 1] = { title = title, giver = l.giver, place = l.zone, level = l.level,
                                 mapID = l.mapID, x = l.x, y = l.y, learned = true }
             seen[title] = true
-        end
-    end
-
-    -- every quest Questie files under this dungeon (already filtered to your faction)
-    local fromQuestie = ns.QuestieDungeonQuests and ns.QuestieDungeonQuests(d.key)
-    if fromQuestie then
-        local lowerSeen = {}
-        for title in pairs(seen) do lowerSeen[title:lower()] = true end
-        for _, q in ipairs(fromQuestie) do
-            if not lowerSeen[q.title:lower()] then
-                list[#list + 1] = { title = q.title, level = q.level, fromQuestie = true }
-                lowerSeen[q.title:lower()] = true
-            end
         end
     end
 
@@ -1138,11 +1192,13 @@ local function PickupList(d)
     local list = {}
     for _, q in ipairs((QuestsFor(d))) do
         if not q.inside and not QuestStatus(q.title) then
-            local start = ns.QuestieStart and ns.QuestieStart(q.title)
-            local doable = true
-            if start and start.questId and ns.QuestieIsDoable then
-                doable = ns.QuestieIsDoable(start.questId) ~= false
+            local id = q.questieId
+            if not id then
+                local start = ns.QuestieStart and ns.QuestieStart(q.title)
+                id = start and start.questId
             end
+            local doable = true
+            if id and ns.QuestieIsDoable then doable = ns.QuestieIsDoable(id) ~= false end
             if doable then
                 local spec = QuestSpec(q, d.key)
                 list[#list + 1] = { q = q, spec = spec, yards = YardsTo(spec.spot) }
@@ -1268,6 +1324,26 @@ local function BuildOverview(d, Add)
     for _, q in ipairs(quests) do if doneTitles[q.title:lower()] then done = done + 1 end end
     Add({ text = format("Quests: %d of %d done   |cffffd200Open the Quests tab >|r", done, #quests),
           onClick = GoTo("quests"), tooltip = "See every quest, its giver and a map marker" })
+    -- in the levelling guide?
+    local mine = ns.PlayerFaction()
+    if ns.GuideDungeonOn and (not d.faction or not mine or d.faction == mine) then
+        local run = ns.GuideDungeonRun and ns.GuideDungeonRun(d.key)
+        if ns.db.guideSkipDungeons then
+            Add({ text = "Levelling guide: dungeons are turned off (Settings > Levelling guide > Skip dungeons)",
+                  color = ns.color.dim })
+        elseif not ns.GuideDungeonOn(d.key) then
+            Add({ text = "Levelling guide: left out   |cffffd200Put it back >|r",
+                  onClick = function() ns.GuideSetDungeon(d.key, true) end,
+                  tooltip = "The guide picks up its quests on the way, runs it, then hands them in" })
+        elseif run then
+            Add({ text = format("Levelling guide: run it at level %d with %d quest%s   |cffffd200Leave it out >|r",
+                      run.level, run.quests, run.quests == 1 and "" or "s"),
+                  onClick = function() ns.GuideSetDungeon(d.key, false) end,
+                  tooltip = "The guide picks up its quests on the way, sends you in, then hands them in. Click to leave it out." })
+        else
+            Add({ text = "Levelling guide: no quests to guide you through here", color = ns.color.dim })
+        end
+    end
     local bosses, loot = BossList(d), LootFor(d)
     Add({ text = format("Bosses: %d   Loot: %d items   |cffffd200Open the Loot tab >|r", #bosses, ItemCount(loot)),
           onClick = GoTo("loot"), tooltip = "Browse the loot, filtered to what you can use" })
@@ -1568,6 +1644,13 @@ end
 
 function ns.DungeonInfo(key)
     return byKey[key]
+end
+
+-- a dungeon's quests as the journal lists them (and whether Questie's still loading)
+function ns.DungeonQuestList(key)
+    local d = byKey[key]
+    if not d then return {}, false end
+    return QuestsFor(d)
 end
 
 function ns.RefreshJournal()

@@ -2,6 +2,11 @@ local ADDON_NAME, ns = ...
 
 -- Dungeon journal data.
 --
+-- Since the full release the journal (and the levelling guide's dungeon runs)
+-- take each dungeon's quests from QuestieDB first: who gives them, where, and
+-- what comes first. The quest lists below are the beta-era lists; they only
+-- add rewards and fill in for quests QuestieDB doesn't have yet.
+--
 -- Only what a source confirms is here; everything else is learned in game
 -- (see Journal.lua). Sources, checked October 2026 against beta 1.60.1:
 --   new dungeons:  wow-forever.top dungeon + loot pages, Warcraft Tavern's

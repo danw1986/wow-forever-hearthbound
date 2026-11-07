@@ -476,6 +476,8 @@ local function UserSkip(s)
     if skipZones and s.section and skipZones[s.section] and not ((s.t == "C" or s.t == "T") and StepInLog(s)) then return true end
     if ns.db.guideSkipGroup and s.group then return true end
     if ns.db.guideSkipDungeons and (s.t == "D" or s.instance or s.dungeonName) then return true end
+    -- a dungeon you've left out (its quests in your log still get handed in)
+    if s.dungeon and not ns.GuideDungeonOn(s.dungeon) and not (s.t == "T" and StepInLog(s)) then return true end
     return false
 end
 
@@ -834,6 +836,12 @@ local function PassedRaw(j)
             end
             return false
         end
+        if s.dungeonRun then
+            local ran = state.ran and state.ran[s.dungeonRun]
+            if s.t == "A" and ran then return true end -- you've been in: too late to collect it
+            -- you passed the run by without going in: its unfinished quests don't hold you up
+            if s.t == "T" and state.done[s.dungeonRun] and not ran and StillToDo(s) then return true end
+        end
         if s.t == "A" then
             -- one you can never take: not for your race or class, or you did another instead
             local why = ns.QuestieWhyNot and ns.QuestieWhyNot(s.q)
@@ -849,6 +857,18 @@ local function PassedRaw(j)
         return false -- in your log: do it, or hand it in
     end
     if not K.WhenHolds(s) then return true end
+    if s.t == "D" and s.dungeon then
+        -- a dungeon run: done when you come out (CheckCurrent), or once you've
+        -- handed one of its quests in; passed if you left it out, or took none
+        -- of its quests (click it to run it anyway)
+        if UserSkip(s) then return true end
+        local any = false
+        for _, id in ipairs(s.runQuests or K.NONE) do
+            if Completed(id) then return true end
+            if InLog(id) then any = true end
+        end
+        return (s.pickups or 0) > 0 and questLogReady and not any and not (state.ran and state.ran[s.i]) or false
+    end
     if s.t == "SH" and BoundAt(s.text) then return true end
     if s.t == "FP" then
         local known = FlightKnown(s)
@@ -1137,6 +1157,22 @@ end
 
 -- things only the step on screen can notice (being near it, landing, hearthing)
 local function CheckCurrent()
+    -- a dungeon run: going in counts it as run (its pick-ups are too late now),
+    -- and coming out again finishes it
+    if K.runSteps and K.runSteps[1] then
+        local inside = IsInInstance()
+        for _, j in ipairs(K.runSteps) do
+            local r = list[j]
+            if r and not state.done[r.i] then
+                state.ran = state.ran or {}
+                if inside and InDungeon(r.dungeonName) then
+                    state.ran[r.i] = true
+                elseif state.ran[r.i] then
+                    state.done[r.i] = true
+                end
+            end
+        end
+    end
     local s = list[cur]
     if not s or state.done[s.i] then return end
     if s.t == "G" then
@@ -1144,7 +1180,7 @@ local function CheckCurrent()
         if d and d <= K.ARRIVE_YARDS then state.done[s.i] = true end
     elseif s.t == "H" or s.t == "F" then
         if not Safe(UnitOnTaxi, "player") and AtPlace(s.text) then state.done[s.i] = true end
-    elseif s.t == "D" then
+    elseif s.t == "D" and not s.dungeon then
         if InDungeon(s.dungeonName) then state.done[s.i] = true end
     end
 end
@@ -2163,6 +2199,28 @@ local function Details(s)
         lines[#lines + 1] = who .. s.target.name
     end
     if s.note then lines[#lines + 1] = s.note end
+    -- a dungeon run: its quests in your log, and what's left of each
+    if s.t == "D" and s.runQuests then
+        local open = {}
+        for _, e in ipairs(ns.openQuests or K.NONE) do open[e.id] = e end
+        local have = 0
+        for _, id in ipairs(s.runQuests) do
+            local e = open[id]
+            if e then
+                have = have + 1
+                lines[#lines + 1] = e.complete and ("|cff6fdc6f" .. (e.title or "?") .. " - done|r") or ("|cffffd200" .. (e.title or "?") .. "|r")
+                local objectives = not e.complete and C_QuestLog and C_QuestLog.GetQuestObjectives
+                    and Safe(C_QuestLog.GetQuestObjectives, id)
+                for _, o in ipairs(type(objectives) == "table" and objectives or K.NONE) do
+                    if o.text and o.text ~= "" and not o.finished then lines[#lines + 1] = "|cffcccccc   - " .. o.text .. "|r" end
+                end
+            end
+        end
+        if have == 0 then
+            lines[#lines + 1] = "|cff999999None of its quests are in your log. Run it for the XP and loot, or press > to pass it by.|r"
+        end
+        lines[#lines + 1] = "|cff999999Going in and coming out again ticks this off. Right-click to leave this dungeon out of the guide.|r"
+    end
     -- what it's worth
     local xp = s.q and StepXP(s)
     if xp and (s.t == "T" or s.t == "A") then
@@ -2445,6 +2503,11 @@ function ns.GuideStepMenu(anchor, st)
         items[#items + 1] = { "Unskip this step", function() ns.GuideSkipStep(st, false) end }
     elseif not GameDone(st) then
         items[#items + 1] = { "Skip this step", function() ns.GuideSkipStep(st, true) end }
+    end
+    if st.dungeon then
+        local d = ns.DungeonInfo and ns.DungeonInfo(st.dungeon)
+        items[#items + 1] = { "Leave " .. (d and d.name or "this dungeon") .. " out of the guide",
+                              function() ns.GuideSetDungeon(st.dungeon, false) end }
     end
     if st.q then
         if ns.db.guideNever and ns.db.guideNever[st.q] then
@@ -4184,6 +4247,374 @@ local function MergeClassQuests(route)
     return merged
 end
 
+---------------------------------------------------------------------------
+-- Dungeons in the route. For each dungeon you can run (your faction's, not
+-- left out), its quests from QuestieDB become steps:
+--   * pick each one up where the route passes its giver on the way to the
+--     dungeon's level (or, if it never does, just before the run)
+--   * "run it" at the entrance, at the level the dungeon's quests suit
+--   * hand them in where the route passes the finisher afterwards (or straight after)
+-- "Go and see someone" quests that lead to another of its quests are picked up
+-- and handed in on the way. Quests the route has already are left alone, and so
+-- are ones that need a quest you won't have; the dungeon journal lists them all.
+---------------------------------------------------------------------------
+K.DUNGEON_STEP_BASE = 2000000 -- quest steps: + id * 4 (+0 pick up, +2 hand in)
+K.DUNGEON_RUN_BASE = 3000000  -- the run itself: + a number from the dungeon's key
+K.DUNGEON_NEAR = 1500 -- yards: a giver this near the entrance is worth the trip, a route step this near is "there"
+
+function K.KeyNumber(key)
+    local n = 0
+    for c = 1, #key do n = (n * 31 + key:byte(c)) % 99991 end
+    return n
+end
+
+-- the dungeon is in your guide (Settings, and the dungeon's own page)
+function ns.GuideDungeonOn(key)
+    if ns.db.guideSkipDungeons then return false end
+    local off = ns.cdb and ns.cdb.guideDungeonsOff
+    return not (off and off[key])
+end
+
+function K.DungeonEntrance(d)
+    local e = ns.QuestieEntrance and ns.QuestieEntrance(d.key)
+    if e then return e end
+    local p = d.entrance
+    local mapID = p and p.x and ns.FindMapID and ns.FindMapID(p.zone or d.zone)
+    return mapID and { mapID = mapID, x = p.x, y = p.y } or nil
+end
+
+function K.SpotWorld(sp)
+    if not (sp and sp.mapID and sp.x and ns.WorldPos) then return nil end
+    local c, wx, wy = ns.WorldPos(sp.mapID, sp.x, sp.y)
+    return c and { continent = c, wx = wx, wy = wy } or nil
+end
+
+function K.DungeonStep(t, info, k, spot, who, d, run)
+    local s = { t = t, q = info.id, name = info.title, dungeon = d.key, dungeonRun = run,
+                i = K.DUNGEON_STEP_BASE + info.id * 4 + k,
+                mapID = spot and spot.mapID, x = spot and spot.x, y = spot and spot.y,
+                zoneName = spot and MapName(spot.mapID), targetName = who,
+                note = (who and ((t == "T" and "To " or "From ") .. who .. " - " ) or "") .. "for " .. d.name,
+                level = info.level, foreverOnly = info.id >= 90000 or nil }
+    if info.alts and #info.alts > 1 then s.alts = info.alts end
+    return s
+end
+
+-- the quests of one dungeon you'd do, or nil: yours, not in the route, and what
+-- has to come first is in the route, done already, or a talk-only quest of these
+function K.DungeonQuests(d, ids, c)
+    local byTitle, qs, byId = {}, {}, {}
+    for _, id in ipairs(ids) do
+        local cached = ns.QuestieQuestInfo(id)
+        local info = nil
+        if cached then
+            info = {} -- a copy: the merge notes things on it (the cache is shared)
+            for k, v in pairs(cached) do info[k] = v end
+        end
+        local why = ns.QuestieWhyNot and ns.QuestieWhyNot(id)
+        if info and (info.start or info.startItem) and not c.inRoute[id]
+            and ns.QuestieFitsYou(id) ~= false and not (type(why) == "string" and why:find("^you did ")) then
+            local same = byTitle[info.title]
+            if same then
+                same.alts[#same.alts + 1] = id -- versions of one quest: any one counts
+            else
+                info.alts = { id }
+                byTitle[info.title] = info
+                qs[#qs + 1] = info
+            end
+            byId[id] = byTitle[info.title]
+        end
+    end
+    local function Have(p) return c.inRoute[p] or (ns.QuestDone and ns.QuestDone(p)) end
+    -- the quest's prerequisites from this dungeon's own list (nil: can't be met)
+    local function Deps(info)
+        local deps = {}
+        if #info.preSingle > 0 then
+            local ok
+            for _, p in ipairs(info.preSingle) do if Have(p) then ok = true break end end
+            if not ok then
+                for _, p in ipairs(info.preSingle) do if byId[p] then deps[#deps + 1] = byId[p] ok = true break end end
+            end
+            if not ok then return nil end
+        end
+        for _, p in ipairs(info.preGroup) do
+            if not Have(p) then
+                if not byId[p] then return nil end
+                deps[#deps + 1] = byId[p]
+            end
+        end
+        return deps
+    end
+    -- drop what can't be done, until nothing more drops
+    local changed = true
+    while changed do
+        changed = false
+        for n = #qs, 1, -1 do
+            local info = qs[n]
+            local deps = Deps(info)
+            local ok = deps ~= nil
+            for _, p in ipairs(deps or K.NONE) do
+                -- only a talk-only quest picked up outside can come before the run
+                if not (p.talkOnly and p.start and p.start.mapID and p.finish and p.finish.mapID) or p.dropped then ok = false end
+            end
+            info.deps = deps
+            if not ok then
+                info.dropped = true
+                table.remove(qs, n)
+                for _, id in ipairs(info.alts) do byId[id] = nil end
+                changed = true
+            end
+        end
+    end
+    return qs
+end
+
+function K.MergeDungeon(d, ids, c, Put)
+    local qs = K.DungeonQuests(d, ids, c)
+    if #qs == 0 then return end
+    local route, levelAt, maps = c.route, c.levelAt, c.maps
+    -- the level to run it at: what most of its quests suit, inside its range
+    local levels = {}
+    for _, info in ipairs(qs) do levels[#levels + 1] = info.level or d.min end
+    table.sort(levels)
+    local runLevel = math.max(d.min + 1, math.min(d.max - 3, (levels[math.ceil(#levels / 2)] or d.min) - 1))
+    -- picked up before the run, so you need to be able to take them by then
+    for n = #qs, 1, -1 do
+        local need = qs[n].requiredLevel or 0
+        if need > runLevel + (qs[n].start and qs[n].start.mapID and 0 or 2) then table.remove(qs, n) end
+    end
+    if #qs == 0 then return end
+    local entrance = K.DungeonEntrance(d)
+    -- where: the first step at that level, or soon after where the route is in the dungeon's zone
+    local j0 = #route + 1
+    for k = 1, #route do if levelAt[k] >= runLevel then j0 = k break end end
+    local runSlot = j0
+    local gate = K.SpotWorld(entrance)
+    if gate then
+        -- the first time near the entrance from that level on (or the nearest the route comes)
+        local best, bestD
+        for k = math.max(1, j0 - 30), math.min(#route, j0 + 300) do
+            if k > j0 and levelAt[k] > runLevel + 3 then break end
+            local w = c.world(k)
+            local dist = w and WorldDist(w, gate)
+            if dist and dist < K.DUNGEON_NEAR then best = k break end
+            if dist and (not bestD or dist < bestD) then best, bestD = k, dist end
+        end
+        if best and (not bestD or bestD < K.DUNGEON_NEAR * 3) then runSlot = best end
+    end
+    local runEnd = math.min(#route, runSlot + 250)
+    for k = runSlot, runEnd do if levelAt[k] > runLevel + 4 then runEnd = k break end end
+    local runI = K.DUNGEON_RUN_BASE + K.KeyNumber(d.key)
+    local function FromGate(sp)
+        local w = K.SpotWorld(sp)
+        return (w and gate and WorldDist(w, gate)) or 1e6
+    end
+    -- the last time the route is on a map between two places, or nil
+    local function LastOn(mapID, from, to)
+        for k = to, from, -1 do if maps[k] == mapID then return k end end
+    end
+    local function FirstOn(mapID, from, to)
+        for k = from, to do if maps[k] == mapID then return k end end
+    end
+    -- quests in the order they can be done: what comes first, first
+    local order, placed = {}, {}
+    local function Visit(info)
+        if placed[info] then return end
+        placed[info] = true
+        for _, p in ipairs(info.deps or K.NONE) do Visit(p) end
+        order[#order + 1] = info
+    end
+    table.sort(qs, function(a, b)
+        if (a.level or 0) ~= (b.level or 0) then return (a.level or 0) < (b.level or 0) end
+        return a.id < b.id
+    end)
+    for _, info in ipairs(qs) do Visit(info) end
+    local inside, away, runQuests, pickups = {}, {}, {}, 0
+    local depth = {}
+    local function section(slot) return (route[math.min(slot, #route)] or {}).section end
+    -- 1. where each is picked up, and which aren't worth it
+    for _, info in ipairs(order) do
+        local s = info.start
+        depth[info] = 0
+        for _, p in ipairs(info.deps or K.NONE) do
+            depth[info] = math.max(depth[info], (depth[p] or 0) + 1)
+            if p.away then info.away = true end
+        end
+        if s and s.mapID and not info.away then
+            -- from when you could take it (and after what it needs), until the run
+            local from = 1
+            for k = 1, #route do
+                if levelAt[k] >= math.max(info.requiredLevel or 1, runLevel - 6) then from = k break end
+            end
+            for _, p in ipairs(info.preSingle) do if c.turnInAt[p] then from = math.max(from, c.turnInAt[p] + 1) end end
+            for _, p in ipairs(info.preGroup) do if c.turnInAt[p] then from = math.max(from, c.turnInAt[p] + 1) end end
+            for _, p in ipairs(info.deps or K.NONE) do from = math.max(from, p.slot or from) end
+            local slot = from < runSlot and LastOn(s.mapID, from, runSlot - 1) or nil
+            info.fallback = slot == nil
+            info.slot = slot or runSlot
+            -- the route never passes its giver: only worth a trip if it's near the dungeon
+            if info.fallback and FromGate(s) > K.DUNGEON_NEAR then info.away = true end
+        end
+    end
+    -- a "go and see someone" quest is only there to lead to the next: not without it
+    for n = #order, 1, -1 do
+        local p = order[n]
+        local leads, kept = false, false
+        for _, info in ipairs(order) do
+            for _, dep in ipairs(info.deps or K.NONE) do
+                if dep == p then
+                    leads = true
+                    if not info.away then kept = true end
+                end
+            end
+        end
+        if leads and not kept then p.away = true end
+    end
+    local followed = {} -- a talk-only quest -> it's handed in with the first quest it leads to
+    for _, info in ipairs(order) do
+        for _, p in ipairs(info.deps or K.NONE) do followed[p] = followed[p] or info end
+    end
+    -- 2. the steps
+    local count = 0
+    for _, info in ipairs(order) do
+        for _, id in ipairs(info.alts) do runQuests[#runQuests + 1] = id end
+        local s = info.start
+        if info.away then
+            if s and s.mapID then
+                away[#away + 1] = format("%s (from %s%s)", info.title, s.giver or "?",
+                    MapName(s.mapID) and (", " .. MapName(s.mapID)) or "")
+            end
+        elseif s and s.mapID then
+            count = count + 1
+            local slot = info.slot
+            local steps = {}
+            -- the talk-only quests that lead to it: hand them in here
+            for _, p in ipairs(info.deps or K.NONE) do
+                if followed[p] == info then
+                    steps[#steps + 1] = K.DungeonStep("T", p, 2, p.finish, p.finish.giver, d, runI)
+                end
+            end
+            steps[#steps + 1] = K.DungeonStep("A", info, 0, s, s.giver, d, runI)
+            pickups = pickups + 1
+            for _, st in ipairs(steps) do st.section = section(slot) end
+            Put(slot, 1, depth[info] * 1e7 + (info.fallback and -FromGate(s) or 0), steps)
+            if info.talkOnly and not followed[info] and info.finish and info.finish.mapID then
+                -- a talk-only quest on its own: handed in on the way too
+                local t = LastOn(info.finish.mapID, slot, runSlot - 1) or runSlot
+                local st = K.DungeonStep("T", info, 2, info.finish, info.finish.giver, d, runI)
+                st.section = section(t)
+                Put(t, 1, (depth[info] + 1) * 1e7, { st })
+            end
+        else
+            count = count + 1
+            inside[#inside + 1] = info.title .. (info.startItem and (" (starts from " .. info.startItem .. ")")
+                or (s and s.giver and (" (from " .. s.giver .. ")") or ""))
+        end
+        -- handed in after the run (one you picked up yourself too)
+        if not info.talkOnly and info.finish and info.finish.mapID then
+            local t = FirstOn(info.finish.mapID, runSlot, runEnd)
+            local st = K.DungeonStep("T", info, 2, info.finish, info.finish.giver, d, runI)
+            st.section = section(t or runSlot)
+            Put(t or runSlot, 3, t and 0 or FromGate(info.finish), { st })
+        end
+    end
+    if count == 0 then return end
+    local notes = {}
+    if #inside > 0 then notes[#notes + 1] = "Picked up inside: " .. table.concat(inside, ", ") end
+    if #away > 0 then notes[#notes + 1] = "Also for it, off the route: " .. table.concat(away, ", ") end
+    local run = { t = "D", dungeonName = d.name, dungeon = d.key, i = runI, level = runLevel,
+                  text = format("run it: %d quest%s", count, count == 1 and "" or "s"),
+                  mapID = entrance and entrance.mapID, x = entrance and entrance.x, y = entrance and entrance.y,
+                  zoneName = entrance and MapName(entrance.mapID), runQuests = runQuests, pickups = pickups,
+                  note = #notes > 0 and table.concat(notes, "\n") or nil,
+                  section = (route[math.min(runSlot, #route)] or {}).section }
+    Put(runSlot, 2, 0, { run })
+    K.dungeonRuns[d.key] = { level = runLevel, quests = count, i = runI }
+end
+
+-- where the guide runs a dungeon: { level, quests, i } or nil
+function ns.GuideDungeonRun(key)
+    return K.dungeonRuns and K.dungeonRuns[key]
+end
+
+-- put a dungeon in your guide, or leave it out (this character)
+function ns.GuideSetDungeon(key, on)
+    ns.cdb.guideDungeonsOff = ns.cdb.guideDungeonsOff or {}
+    ns.cdb.guideDungeonsOff[key] = (not on) or nil
+    local d = ns.DungeonInfo and ns.DungeonInfo(key)
+    ns.Print(format("Guide: |cffffd200%s|r %s.", d and d.name or key,
+        on and "is in your levelling guide" or "is left out of your levelling guide"))
+    if on and K.Rebuild then K.Rebuild() elseif state then Evaluate() end
+    if ns.RefreshJournal then ns.RefreshJournal() end
+end
+
+local function MergeDungeons(route)
+    K.dungeonRuns, K.dungeonsPending = {}, false
+    if ns.db.guideSkipDungeons or not (type(ns.DUNGEONS) == "table" and ns.QuestieQuestInfo and ns.QuestieFitsYou
+        and ns.QuestieAvailable and ns.QuestieAvailable()) then return route end
+    local mine = ns.PlayerFaction and ns.PlayerFaction()
+    local c = { route = route, inRoute = {}, turnInAt = {}, levelAt = {}, maps = {} }
+    local world = {}
+    function c.world(k)
+        local w = world[k]
+        if w == nil then
+            local st = route[k]
+            w = (st and st.x and c.maps[k] and K.SpotWorld({ mapID = c.maps[k], x = st.x, y = st.y })) or false
+            world[k] = w
+        end
+        return w or nil
+    end
+    local level = 1
+    for j, s in ipairs(route) do
+        if s.q then c.inRoute[s.q] = true end
+        for _, id in ipairs(s.alts or K.NONE) do c.inRoute[id] = true end
+        if s.t == "T" and s.q then c.turnInAt[s.q] = j end
+        -- the level you'll be here: what the pick-ups so far need (a quest's own level runs a few above yours)
+        local l = s.t == "A" and s.q and RequiredLevel(s.q)
+        if s.t == "A" and s.q and not l then
+            l = QuestLevel(s.q)
+            l = l and math.max(1, l - 3)
+        end
+        if l and l > level and l - level <= 4 then level = l end
+        c.levelAt[j] = level
+        c.maps[j] = s.mapID or MapFor(s)
+    end
+    local before = {}
+    local function Put(slot, phase, key, steps)
+        local b = before[slot] or {}
+        before[slot] = b
+        b[#b + 1] = { phase = phase, key = key, n = #b, steps = steps }
+    end
+    for _, d in ipairs(ns.DUNGEONS) do
+        if (not d.faction or not mine or d.faction == mine) and ns.GuideDungeonOn(d.key) then
+            local ids = ns.QuestieDungeonQuestIds(d.key)
+            if not ids then
+                K.dungeonsPending = true -- Questie's still reading: built again when it's done
+            elseif #ids > 0 then
+                local ok, err = pcall(K.MergeDungeon, d, ids, c, Put)
+                if not ok and ns.Debug then ns.Debug("guide dungeons: " .. d.key .. ": " .. tostring(err)) end
+            end
+        end
+    end
+    if not next(before) then return route end
+    local merged = {}
+    for j = 1, #route + 1 do
+        local b = before[j]
+        if b then
+            table.sort(b, function(x, y)
+                if x.phase ~= y.phase then return x.phase < y.phase end
+                if x.key ~= y.key then return x.key < y.key end
+                return x.n < y.n
+            end)
+            for _, e in ipairs(b) do
+                for _, st in ipairs(e.steps) do merged[#merged + 1] = st end
+            end
+        end
+        if route[j] then merged[#merged + 1] = route[j] end
+    end
+    return merged
+end
+
 -- the level a step's quest needs you to be (QuestieDB's required level; a
 -- quest's own level is usually a few above that)
 local function QStepLevel(s)
@@ -4210,7 +4641,7 @@ local function Load()
     end
     local level = 1
     routeLevel = {}
-    for _, s in ipairs(MergeClassQuests(route)) do
+    for _, s in ipairs(MergeDungeons(MergeClassQuests(route))) do
         list[#list + 1] = s
         byNumber[s.i] = #list
         -- the level the route expects you to be here: the levels its pick-ups so
@@ -4221,6 +4652,19 @@ local function Load()
         if s.t == "A" and s.q and not acceptAt[s.q] then acceptAt[s.q] = #list end
         if s.t == "A" and s.target and s.target.kind == "item" and s.target.id then itemSteps[#itemSteps + 1] = #list end
         for _, id in ipairs(s.t == "A" and s.alts or {}) do acceptAt[id] = acceptAt[id] or #list end
+    end
+    -- the dungeon runs, for noticing when you go in; and if Questie hadn't
+    -- finished reading its dungeon lists, the route's built again when it has
+    K.runSteps = {}
+    for j, s in ipairs(list) do
+        if s.t == "D" and s.dungeon then K.runSteps[#K.runSteps + 1] = j end
+    end
+    if K.dungeonsPending and not K.dungeonWait and ns.QuestieQuestGivers then
+        K.dungeonWait = true
+        ns.QuestieQuestGivers(function()
+            K.dungeonWait = nil
+            C_Timer.After(0, function() if K.Rebuild then K.Rebuild() end end)
+        end)
     end
     -- the route's sections, each with the zone most of its steps are in
     sections, sectionOf, zoneHint = {}, {}, nil
@@ -4677,13 +5121,14 @@ table.insert(ns.inits, function()
     ns.On("PLAYER_LOGIN", function() C_Timer.After(2, Start) end)
     -- the class quest list arrives a little after login: rebuild the route with them in
     -- (your place is kept by step number)
-    local classSetting = ns.db.guideClassQuests
+    local classSetting, dungeonSetting = ns.db.guideClassQuests, ns.db.guideSkipDungeons
     local function Rebuild()
         if not state then return end
-        classSetting = ns.db.guideClassQuests
+        classSetting, dungeonSetting = ns.db.guideClassQuests, ns.db.guideSkipDungeons
         Load()
         Refresh()
     end
+    K.Rebuild = Rebuild
     if ns.OnGuideClassQuests then ns.OnGuideClassQuests(function() C_Timer.After(0, Rebuild) end) end
 
     -- the quests you take: dropping one later sends you back for it
@@ -4744,6 +5189,8 @@ table.insert(ns.inits, function()
         if not state then return end
         -- class quests switched on or off in Settings: the route changes
         if ns.db.guideClassQuests ~= classSetting then return Rebuild() end
+        -- dungeons switched on or off: the same
+        if ns.db.guideSkipDungeons ~= dungeonSetting then return Rebuild() end
         Refresh()
     end)
 end)

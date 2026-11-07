@@ -31,6 +31,9 @@ tools into one window, and keeps a record of each character's journey to 60.
   that learns from your play
 - Guide panel with every zone and section of the route
 - Quests that are new in WoW Forever are marked NEW, and each zone shows how many it has
+- Dungeon runs built into the route: it picks up a dungeon's quests as you pass
+  their givers, sends you in at the right level, then hands them in. Leave out
+  any dungeon (right-click its step, or on its page), or all of them in Settings
 
 **Built around your character**
 - Recognises your class and spec: the talent tree with the most points, or the
@@ -60,8 +63,9 @@ tools into one window, and keeps a record of each character's journey to 60.
   collections
 
 **Dungeons**
-- Dungeon journal with quests (and map markers), bosses, per-boss loot and a
-  banner picture for each dungeon
+- Dungeon journal with every quest for your character: who gives it, where (with
+  a map marker), what to do first, and which start inside. Plus bosses, per-boss
+  loot and a banner picture for each dungeon
 
 **Journey and stats**
 - Journey tab: road to 60, milestones reached, deaths and level history

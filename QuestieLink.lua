@@ -264,6 +264,62 @@ function ns.QuestieFinish(title, id)
     finishCache[key] = result or false
     return result
 end
+-- Everything about one quest, for the dungeon pages and dungeon runs in the guide:
+-- { id, title, level, requiredLevel,
+--   start = { giver, mapID, x, y, kind } | nil (mapID nil: the giver stands inside a dungeon),
+--   startItem = item name | nil (it starts from an item),
+--   finish = { giver, mapID, x, y, kind } | nil,
+--   preSingle = { ids } (any one first), preGroup = { ids } (all first),
+--   talkOnly = true when it has no objectives (a "go and see someone" quest) }
+-- Kept per quest; nil without QuestieDB.
+local questInfo = {}
+local function IdList(v)
+    local out = {}
+    for _, id in ipairs(type(v) == "table" and v or {}) do
+        if type(id) == "number" then out[#out + 1] = id end
+    end
+    return out
+end
+function ns.QuestieQuestInfo(id)
+    if not (id and Lib()) then return nil end
+    local cached = questInfo[id]
+    if cached ~= nil then return cached or nil end
+    local title = Get("Quest", id, "name")
+    if not title then
+        questInfo[id] = false
+        return nil
+    end
+    local faction = MyFaction()
+    local startedBy, finishedBy = Get("Quest", id, "startedBy"), Get("Quest", id, "finishedBy")
+    local info = { id = id, title = title, level = Get("Quest", id, "questLevel"),
+                   requiredLevel = Get("Quest", id, "requiredLevel") }
+    if type(startedBy) == "table" then
+        info.start = Locate(startedBy[1], startedBy[2], faction)
+        local item = type(startedBy[3]) == "table" and startedBy[3][1]
+        if item and not info.start then info.startItem = Get("Item", item, "name") or "an item" end
+    end
+    if type(finishedBy) == "table" then info.finish = Locate(finishedBy[1], finishedBy[2], faction) end
+    info.preSingle = IdList(Get("Quest", id, "preQuestSingle"))
+    info.preGroup = IdList(Get("Quest", id, "preQuestGroup"))
+    local o = Get("Quest", id, "objectives")
+    local any = false
+    for k = 1, 6 do
+        if type(o) == "table" and type(o[k]) == "table" and next(o[k]) then any = true break end
+    end
+    info.talkOnly = not any and Get("Quest", id, "triggerEnd") == nil
+    questInfo[id] = info
+    return info
+end
+
+-- The quest IDs Questie files under a dungeon, or nil while its scan runs
+function ns.QuestieDungeonQuestIds(dungeonKey)
+    local list = ns.QuestieDungeonQuests(dungeonKey)
+    if not list then return nil end
+    local ids = {}
+    for _, q in ipairs(list) do ids[#ids + 1] = q.questieId end
+    return ids
+end
+
 ---------------------------------------------------------------------------
 -- Dungeons: entrances and the quests Questie files under each dungeon
 ---------------------------------------------------------------------------
