@@ -72,6 +72,7 @@ ns.defaults = {
     minimapAngle = 220,
     guide = true,      -- the levelling guide window
     guideArrow = true, -- its arrow
+    guideHearthHint = true, -- "Hearth to Ratchet: saves about 6 min" when hearthing is quicker
     guidePanel = true, -- the current step in the panel
     guideEdition = "horde",
     guideSkipGrey = true, -- the guide passes quests too low to give you real XP

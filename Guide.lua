@@ -46,7 +46,7 @@ local ZONE_MAPS = {
     [1497] = 1458, [406] = 1442, [331] = 1440, [267] = 1424, [400] = 1441, [33] = 1434, [45] = 1417,
     [405] = 1443, [15] = 1445, [8] = 1435, [440] = 1446, [357] = 1444, [47] = 1425, [490] = 1449,
     [361] = 1448, [618] = 1452, [3] = 1418, [51] = 1427, [28] = 1422, [139] = 1423,
-    [36] = 1416, [16] = 1447, [46] = 1428, [1377] = 1451, [16593] = 2521,
+    [36] = 1416, [16] = 1447, [46] = 1428, [1377] = 1451, [16593] = 2521, [493] = 1450,
 }
 
 local list = {}    -- this character's steps, in order
@@ -1993,29 +1993,94 @@ local function WorldDist(a, b)
     return math.sqrt((a.wx - b.wx) ^ 2 + (a.wy - b.wy) ^ 2)
 end
 
+-- Where your hearthstone takes you: the inn of the route's "set hearth" step
+-- for the town it's set to (any race's route), kept until you set it elsewhere.
+-- nil when the route has no inn there.
+local innFor, innSpot
+function K.InnSpot()
+    local bind = Safe(GetBindLocation)
+    if type(bind) ~= "string" or bind == "" then return nil end
+    if innFor ~= bind then
+        innFor, innSpot = bind, nil
+        local route = ns.HordeGuides and ns.HordeGuides[ns.db.guideEdition or "horde"]
+        for _, h in ipairs(route or K.NONE) do
+            if h.t == "SH" and h.x and h.y and Matches(h.text, bind) then
+                local mapID = MapFor(h)
+                local continent, wx, wy
+                if mapID then continent, wx, wy = ns.WorldPos(mapID, h.x, h.y) end
+                if continent then
+                    innSpot = { continent = continent, wx = wx, wy = wy }
+                    break
+                end
+                innFor = nil -- the map isn't ready yet: look again next time
+            end
+        end
+    end
+    return innSpot, bind
+end
+
+-- Would hearthing get you to t sooner than going there? Your own speed
+-- (mounted or not) over the ground - paths wind, so a third more than the
+-- straight line - against the wait for the hearthstone, the 10s cast and the
+-- way from the inn. Returns the seconds it saves, the town, the cooldown left;
+-- nil when it doesn't save at least K.HEARTH_MIN_SAVING and a third of the trip.
+-- For a step across the sea with the inn on its side: saves = true.
+K.HEARTH_MIN_SAVING = 180
+K.PATH_WIND = 1.3
+K.HEARTH_CAST = 10
+K.RUN_SPEED = 7 -- yards a second on foot
+function K.HearthSaving(t)
+    if not (t and t.continent) or ItemCount(K.HEARTHSTONE) == 0 then return nil end
+    local inn, bind = K.InnSpot()
+    if not inn then return nil end
+    local pc, px, py = ns.PlayerWorldPos()
+    if not pc then return nil end
+    local cd = HearthCooldown() or 0
+    local fromInn = WorldDist(inn, t)
+    if pc ~= t.continent then
+        -- the step is over the sea and the inn's on its side: hearth beats the boat
+        if fromInn and fromInn < 2000 and cd < 600 then return true, bind, cd end
+        return nil
+    end
+    local direct = WorldDist({ continent = pc, wx = px, wy = py }, t)
+    if not (direct and fromInn) or direct < K.TRAVEL_MIN_YARDS then return nil end
+    local speed = K.RUN_SPEED
+    if GetUnitSpeed then
+        local _, run = Safe(GetUnitSpeed, "player")
+        if type(run) == "number" and not ns.IsSecret(run) and run > speed then speed = run end
+    end
+    local go = direct * K.PATH_WIND / speed
+    local hearth = math.max(cd, 0) + K.HEARTH_CAST + fromInn * K.PATH_WIND / speed
+    local saves = go - hearth
+    if saves < K.HEARTH_MIN_SAVING or saves < go / 3 then return nil end
+    return saves, bind, cd
+end
+
+-- "Hearth to Ratchet: saves about 6 min" (short = for under the arrow)
+function K.HearthHint(t, short)
+    local saves, bind, cd = K.HearthSaving(t)
+    if not saves then return nil end
+    local why = saves == true and "quicker than the boat or zeppelin"
+        or format("saves about %d min", math.floor(saves / 60 + 0.5))
+    local wait = ""
+    if cd and cd > 0 then
+        wait = format(" |cff999999(ready in %s)|r", ns.Duration and ns.Duration(cd) or (math.ceil(cd / 60) .. "m"))
+    elseif not short then
+        wait = " |cff6fdc6f(ready)|r"
+    end
+    return format("|cff66ccffHearth to %s:|r %s%s", bind, why, wait)
+end
+
 function TravelTip(s)
     local t = Target(NeedsPickup(s) and PickupStep(s) or s)
+    -- the hearth
+    local hearth = ns.db.guideHearthHint ~= false and K.HearthHint(t)
+    if hearth then return hearth end
     local pc, px, py = ns.PlayerWorldPos()
     if not (t and pc and t.continent == pc) then return nil end
     local me = { continent = pc, wx = px, wy = py }
     local direct = WorldDist(me, t)
     if not direct or direct < K.TRAVEL_MIN_YARDS then return nil end
-    -- the hearth
-    local bind = Safe(GetBindLocation)
-    if type(bind) == "string" then
-        for _, h in ipairs(list) do
-            if h.t == "SH" and h.text and Matches(h.text, bind) then
-                local spot = Target(h)
-                local d = WorldDist(spot, t)
-                if d and d < direct * 0.4 then
-                    local cd = HearthCooldown()
-                    return format("|cff66ccffQuicker: hearth to %s|r%s", bind,
-                        (cd and cd > 0) and format(" |cff999999(ready in %s)|r", ns.Duration and ns.Duration(cd) or (math.ceil(cd / 60) .. "m")) or " |cff6fdc6f(ready)|r")
-                end
-                break
-            end
-        end
-    end
     -- a flight
     local fromName, fromD, toName, toD
     for _, f in ipairs(list) do
@@ -3809,6 +3874,11 @@ local function BuildArrow()
     arrow.label:SetPoint("TOP", arrow.dist, "BOTTOM", 0, -2)
     arrow.label:SetWidth(220)
     arrow.label:SetWordWrap(false)
+    -- "Hearth to Ratchet: saves about 6 min", when it would
+    arrow.hint = ns.Text(arrow, 10, ns.color.text, "OUTLINE")
+    arrow.hint:SetPoint("TOP", arrow.label, "BOTTOM", 0, -2)
+    arrow.hint:SetWidth(260)
+    arrow.hint:SetWordWrap(false)
 
     arrow:SetScript("OnClick", function(_, button)
         if button == "RightButton" then
@@ -3853,6 +3923,18 @@ end
 
 -- what the arrow last showed, so text is only rebuilt when it changes
 local arrowStep, arrowYards, arrowState
+local hintAt, hintText = 0, nil -- the hearth line under it: looked at every couple of seconds
+
+local function ArrowHint(s)
+    local now = GetTime()
+    if s == arrowStep and now - hintAt < 2 then return end
+    hintAt = now
+    local text = ns.db.guideHearthHint ~= false and K.HearthHint(Target(s), true) or nil
+    if text ~= hintText then
+        hintText = text
+        arrow.hint:SetText(text or "")
+    end
+end
 
 local function ArrowText(state, yards)
     if state == arrowState and yards == arrowYards then return end
@@ -3872,6 +3954,7 @@ function UpdateArrow()
         return
     end
     arrow:Show()
+    ArrowHint(s)
     if arrowStep ~= s then
         arrowStep = s
         arrow.label:SetText(Label(s))

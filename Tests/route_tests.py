@@ -192,14 +192,56 @@ turnin(W, 208)
 W.tick()
 check("you did it: no need", not ns._dbg.whenHolds(lst[k]) and ns._dbg.passed(k))
 
-# hearth if it's bound there, walk if it isn't
+# hearth if it's bound there, walk if it isn't (the route leaves hearthing to the
+# hearth hint now, but a step can still ask)
 L, W, ns, lst = playing(level=30)
-h, g = find(lst, t="H", bound="Freewind Post"), find(lst, t="G", notBound="Freewind Post")
-check("the route has both ways to Freewind Post", h is not None and g is not None)
+hearth, walk = L.table_from({"bound": "Freewind Post"}), L.table_from({"notBound": "Freewind Post"})
 W.bind = "Freewind Post"
-check("bound there: the hearth step stays, the walk passes", not ns._dbg.passed(h) and ns._dbg.passed(g))
+check("bound there: a hearth step applies, the walk doesn't", ns._dbg.whenHolds(hearth) and not ns._dbg.whenHolds(walk))
 W.bind = "Orgrimmar"
-check("bound elsewhere: the walk stays, the hearth passes", ns._dbg.passed(h) and not ns._dbg.passed(g))
+check("bound elsewhere: the walk applies, the hearth doesn't", not ns._dbg.whenHolds(hearth) and ns._dbg.whenHolds(walk))
+
+# the hearth hint: when your hearthstone gets you to the next step sooner
+route = L.globals().HARNESS_NS.HordeGuides.horde
+inns = [route[k] for k in range(1, len(route) + 1) if route[k].t == "SH"]
+check("every set-hearth step on the route knows where its inn is", inns and all(s.x and s.y and s.z for s in inns),
+      [s.text for s in inns if not s.x])
+L, W, ns, lst = playing(level=14)
+k = find(lst, t="SH", text="Ratchet")
+inn = ns._dbg.target(lst[k])
+near = L.table_from({"continent": inn.continent, "wx": inn.wx + 60, "wy": inn.wy})  # 60 yards from the inn
+W.bind, W.items = "Ratchet", L.table_from({6948: 1})
+W.pos = L.table_from({1: 20, 2: 80})  # far across the Barrens: about 3,500 yards
+hint = ns._dbg.hearthHint(near)
+check("far away, bound near the step: hearth", hint is not None and "Hearth to Ratchet:|r saves about" in hint, hint)
+check("...and says it's ready", hint is not None and "(ready)" in hint, hint)
+check("...the step card says so too", "Hearth to Ratchet" in (ns._dbg.details(lst[k]) or ""), ns._dbg.details(lst[k]))
+check("...under the arrow, without the '(ready)'", "(ready)" not in (ns._dbg.hearthHint(near, True) or "(ready)"))
+W.pos = L.table_from({1: 58, 2: 36})  # in Ratchet's corner of the Barrens
+check("close by: no hint", ns._dbg.hearthHint(near) is None)
+W.pos = L.table_from({1: 75, 2: 20})  # north-east of Ratchet, bound at Camp Taurajo: farther from it than you are
+W.bind = "Camp Taurajo"
+farther = ns._dbg.hearthHint(near)
+check("bound somewhere farther from the step than you are: no hint", farther is None, farther)
+W.pos = L.table_from({1: 20, 2: 80})
+W.bind = "Nowhere"
+check("bound somewhere the route has no inn: no hint", ns._dbg.hearthHint(near) is None)
+W.bind = "Ratchet"
+W.items = L.table_from({})
+check("no hearthstone in your bags: no hint", ns._dbg.hearthHint(near) is None)
+W.items = L.table_from({6948: 1})
+L.execute("HARNESS_G.C_Container.GetItemCooldown = function() return W.time, 120 end")
+hint = ns._dbg.hearthHint(near)
+check("two minutes' cooldown: still quicker, and says when it's ready", hint is not None and "ready in" in hint, hint)
+L.execute("HARNESS_G.C_Container.GetItemCooldown = function() return W.time, 3600 end")
+check("an hour's cooldown: walk", ns._dbg.hearthHint(near) is None)
+L.execute("HARNESS_G.C_Container.GetItemCooldown = function() return 0, 0 end")
+ns.db.guideHearthHint = False
+check("turned off in Settings: not on the card", "Hearth to" not in (ns._dbg.details(lst[k]) or ""))
+ns.db.guideHearthHint = True
+L.execute("HARNESS_NS.PlayerWorldPos = function() return 2, 100, 100 end")  # over the sea
+hint = ns._dbg.hearthHint(near)
+check("over the sea from the step, inn on its side: hearth", hint is not None and "boat or zeppelin" in hint, hint)
 
 # a weapon skill: only if you can pay for it and haven't got it
 L, W, ns, lst = playing(level=20)
@@ -292,7 +334,7 @@ check("clicking Accept Egg Hunt marks Korran, not a nearby detour", got == ("Egg
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)
 check("no deathskips: they're opt-in upstream, and never on Hardcore", "Deathskip" not in data)
-check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.2 (guides/forever), GPL-3.0-only" in data)
+check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.4 (guides/forever), GPL-3.0-only" in data)
 # Mulgore is one of the maps Forever redrew: typed in Era's frame, converted to Forever's
 check("a typed Mulgore point lands where it is on Forever's map", 'text="The Venture Co. Mine", z=215, x=61.19, y=49.31' in data)
 for race, rid, want in (("Orc", 2, "The Barrens (12-16)"), ("Troll", 8, "The Barrens (12-16)"), ("Tauren", 6, "The Barrens (12-16)")):

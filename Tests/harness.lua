@@ -168,6 +168,8 @@ ns._dbg = {
     whenHolds = function(s) return K.WhenHolds(s) end,
     places = function() return K.SectionPlaces() end,
     stepPlace = function(d) K.StepPlace(d) end,
+    hearthHint = function(t, short) return K.HearthHint(t, short) end,
+    target = function(s) return Target(s) end,
 }]]
     end
     local f = assert(load(src, "@" .. path, "t", G))
