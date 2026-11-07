@@ -170,6 +170,8 @@ ns._dbg = {
     stepPlace = function(d) K.StepPlace(d) end,
     hearthHint = function(t, short) return K.HearthHint(t, short) end,
     target = function(s) return Target(s) end,
+    k = function() return K end,
+    evaluate = function() Evaluate() end,
 }]]
     end
     local f = assert(load(src, "@" .. path, "t", G))
