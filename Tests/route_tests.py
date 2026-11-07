@@ -156,6 +156,82 @@ W.tick()
 s_, j, _ = ns.GuideCurrent()
 check("a stuck picked note is let go: back on your place", j < note and st.force != lst[note].i, (j, note, st.force))
 
+# 6b. walking into a zone whose only part left is well above you (Azshara at 29: the
+# level 56 sealed crates and the rest of its 50s part): the guide stays put
+HIGH_SEC = "Azshara & The Barrens (56-56)"
+
+
+def azshara_at_29(mark_high=False):
+    L, W, ns = fresh(race="Orc", raceId=2, level=29)
+    ns.db.guideAutoZone, ns.db.guideZonePrompt, ns.db.guideSkipGrey = True, True, True
+    lst = ns._dbg.list()
+    st = ns._dbg.state()
+    high = next(k for k in range(1, len(lst) + 1) if lst[k].section == HIGH_SEC and lst[k].t == "A")
+    # every other part of the route with Azshara in it: done
+    for k in range(1, len(lst) + 1):
+        if lst[k].section != HIGH_SEC and "Azshara" in (lst[k].section or ""):
+            st.done[lst[k].i] = True
+    tn = next(k for k in range(1, len(lst) + 1) if lst[k].zoneName == "Thousand Needles" and lst[k].t == "A"
+              and "Barrens" not in (lst[k].section or ""))
+    W.zone = "Thousand Needles"
+    st.pos, st.hold, st.force = lst[tn].i, False, None
+    if mark_high:
+        st.zoneMarks = L.table_from({"Azshara": lst[high].i})
+    W.tick()
+    return L, W, ns
+
+
+def arrive(W, zone):
+    W.zone = zone
+    W.fire("ZONE_CHANGED_NEW_AREA")
+    W.tick(); W.tick(); W.tick()
+
+
+L, W, ns = azshara_at_29()
+arrive(W, "Azshara")
+s_, j, _ = ns.GuideCurrent()
+check("level 29 into Azshara, only its 56 part left: the guide doesn't jump there",
+      s_.section != HIGH_SEC, (j, s_.section, s_.name or s_.text))
+L, W, ns = azshara_at_29(mark_high=True)
+arrive(W, "Azshara")
+s_, j, _ = ns.GuideCurrent()
+check("...nor to an old bookmark there at level 56", s_.section != HIGH_SEC, (j, s_.section))
+ns.GuideHere()
+W.tick()
+s_, j, _ = ns.GuideCurrent()
+check("...but asking for the zone you're in still takes you there", s_.section == HIGH_SEC, (j, s_.section))
+# the guide left up there by an older version (not a step you picked): walking
+# into a zone at your level brings it back
+L, W, ns = azshara_at_29()
+lst = ns._dbg.list()
+st = ns._dbg.state()
+high = next(k for k in range(1, len(lst) + 1) if lst[k].section == HIGH_SEC and lst[k].t == "A" and lst[k].q == 91904)
+st.pos, st.hold, st.force = lst[high].i, False, None
+W.zone = "Azshara"; W.tick()
+check("(left at the level 56 crates)", ns.GuideCurrent()[0].section == HIGH_SEC, ns.GuideCurrent()[0].section)
+tn_sec = next(lst[k].section for k in range(1, len(lst) + 1) if lst[k].zoneName == "Thousand Needles" and lst[k].t == "A"
+              and "Barrens" not in (lst[k].section or ""))
+zones = {}
+for k in range(1, len(lst) + 1):
+    if lst[k].section == tn_sec and lst[k].zoneName:
+        zones[lst[k].zoneName] = zones.get(lst[k].zoneName, 0) + 1
+main = max(zones, key=zones.get)
+arrive(W, main)
+s_, j, _ = ns.GuideCurrent()
+check(f"...walking into {main} at your level brings it back down", s_.section != HIGH_SEC, (j, s_.section))
+
+# 6c. find my place: a level 60 sealed crate handed in at 29 doesn't put you at the end of the route
+L, W, ns = fresh(race="Orc", raceId=2, level=29)
+lst = ns._dbg.list()
+crate = next(k for k in range(1, len(lst) + 1) if lst[k].t == "T" and lst[k].q == 91899)
+W.completed[91899] = True
+for k in range(1, 1700):
+    if lst[k].t == "T" and lst[k].q:
+        W.completed[lst[k].q] = True
+ns.GuideFindPlace()
+s_, j, _ = ns.GuideCurrent()
+check("find my place ignores a level 60 crate you handed in at 29", j < crate - 500, (j, crate, s_.section))
+
 # 7. steps that apply only sometimes: checked as you play, kept in the route
 STATE = """
 HARNESS_G.UnitXP = function() return W.xp or 0 end

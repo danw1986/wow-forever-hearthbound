@@ -654,6 +654,12 @@ local function Save()
     local s = list[routeCur]
     if not s then return end
     state.pos = s.i
+    -- the next step of the route itself: where to wait if your place is a
+    -- dungeon or class quest step, and those aren't in yet after you log in
+    state.after = nil
+    for k = routeCur, math.min(#list, routeCur + 400) do
+        if list[k].i < 1000000 then state.after = list[k].i break end
+    end
     if state.hold then return end
     local zone = ZoneOf(routeCur)
     if not zone then return end
@@ -1147,8 +1153,14 @@ end
 -- The step after the last quest you've handed in: a good guess at your place
 local function FindPlace()
     local last = 0
+    local me = UnitLevel("player")
     for j, s in ipairs(list) do
-        if s.t == "T" and Completed(s.q) then last = j end
+        -- (not a quest well above you: some, like the sealed crates, can be
+        -- handed in at any level, wherever they sit in the route)
+        if s.t == "T" and Completed(s.q) then
+            local l = QuestLevel(s.q)
+            if not l or l <= me + K.HIGH_LEVELS then last = j end
+        end
     end
     state.pos = list[math.max(1, math.min(#list, last + 1))].i
     state.hold, state.force = false, nil
@@ -1275,6 +1287,7 @@ local function Go(index, mode)
     else
         state.hold = false
         state.pos = list[index].i
+        K.waitPos = nil -- you've picked your place: no going back to one from before you logged in
         -- the step you'd picked before is behind you now: a note (which is never
         -- picked) mustn't leave it in charge, or the guide snaps back to it
         state.force = nil
@@ -1458,14 +1471,35 @@ local function SectionUseful(sec)
     end
 end
 
-local function HereSection()
+-- the level of the quests from step j on: the first one in its section with a
+-- known level (nil if none)
+function K.LevelFrom(j)
+    local sec = sections[sectionOf[j] or 0]
+    for k = j, sec and sec.last or j do
+        local s = list[k]
+        local l = s and s.q and QuestLevel(s.q)
+        if l then return l end
+    end
+end
+
+-- steps from j on suit your level: not well above you. Walking into a zone
+-- only moves the guide to a part of it you can get on with - not, say, the
+-- level 56 part of the Barrens at 29 because the low parts are all done.
+function K.FitsYou(j)
+    local l = j and K.LevelFrom(j)
+    return not l or l <= UnitLevel("player") + K.HIGH_LEVELS
+end
+
+-- anyLevel: any section with steps left, even well above you (you asked for this zone)
+local function HereSection(anyLevel)
     local zone = HereZone()
     if not zone then return nil end
     local me = UnitLevel("player")
     local best, bestGap
     for k, sec in ipairs(sections) do
         if sec.zone and Matches(sec.zone, zone) then
-            if SectionUseful(sec) then
+            local useful = SectionUseful(sec)
+            if useful and (anyLevel or K.FitsYou(useful)) then
                 local l = SectionLevel(sec)
                 local gap = l and math.abs(l - me) or 50
                 if not bestGap or gap < bestGap then best, bestGap = k, gap end
@@ -1638,7 +1672,7 @@ end
 function ns.GuideHere()
     local here = HereZone()
     if here and ZoneMark(here) then return ns.GuideResumeZone(here) end
-    local k = HereSection()
+    local k = HereSection(true)
     if not k then
         return ns.Print("The guide has nothing left to do in " .. (HereZone() or "this zone") .. ".")
     end
@@ -1651,7 +1685,10 @@ local function CheckZoneHint()
     local zone = HereZone()
     if not (s and zone) or IsInInstance() then return end
     local mine = sections[sectionOf[cur]]
-    if (mine and mine.zone and Matches(mine.zone, zone)) or (s.zoneName and Matches(s.zoneName, zone)) then
+    -- the guide's already here - unless it's at a part well above you, when a
+    -- part of this zone at your level (if there is one) is offered instead
+    if ((mine and mine.zone and Matches(mine.zone, zone)) or (s.zoneName and Matches(s.zoneName, zone)))
+        and (K.FitsYou(cur) or not HereSection()) then
         zoneHint = nil
         return
     end
@@ -1719,6 +1756,9 @@ local function PromptZone()
     -- following your zone by itself: switch, and say so (but not away from a quest you picked)
     if ns.db.guideAutoZone and list[cur] and Wanted(list[cur]) and not Done(list[cur]) then return HideZonePrompt() end
     local markJ = ZoneMark(zone)
+    -- a bookmark well above your level (left by an older version jumping you
+    -- there) isn't where to pick up
+    if markJ and not K.FitsYou(markJ) then markJ = nil end
     if ns.db.guideAutoZone then
         HideZonePrompt()
         if markJ then
@@ -4631,6 +4671,7 @@ local function Load()
         or (guides.horde and "horde") or next(guides)
     local data = guides[edition] or {}
     local race, class = PlayerRace(), PlayerClass()
+    local oldList, oldBy = list, byNumber -- (built again: your place may be a step that's gone now)
     list, byNumber, targets, acceptAt, pickupSteps, nameAliases, itemSteps = {}, {}, {}, {}, {}, {}, {}
     local route = {}
     routeQuests = {}
@@ -4720,6 +4761,26 @@ local function Load()
             state.zoneMarks, state.zoneHistory, state.hold = {}, {}, false
         end
         state.routeSignature = signature
+    end
+    -- built again with your place on a step that's gone (a dungeon or class
+    -- quest you've since done, say): the next step still here, not a guess
+    -- from scratch
+    local function Kept(number)
+        local k = number and not byNumber[number] and oldBy[number]
+        if not k then return number end
+        for n = k, #oldList do
+            if byNumber[oldList[n].i] then return oldList[n].i end
+        end
+    end
+    state.pos, state.live = Kept(state.pos), Kept(state.live)
+    for zone, number in pairs(state.zoneMarks or {}) do state.zoneMarks[zone] = Kept(number) end
+    -- still not here: a dungeon or class quest step, and their lists aren't in
+    -- yet. Wait at the route step after it, and go back to it when it turns up.
+    if state.pos and not byNumber[state.pos] and state.after and byNumber[state.after] then
+        K.waitPos, K.waitUntil = state.pos, GetTime() + 120
+        state.pos = state.after
+    elseif K.waitPos and byNumber[K.waitPos] and GetTime() < (K.waitUntil or 0) then
+        state.pos, K.waitPos = K.waitPos, nil
     end
     if state.pos and byNumber[state.pos] then
         cur = byNumber[state.pos]

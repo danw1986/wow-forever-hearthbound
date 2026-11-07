@@ -241,6 +241,49 @@ W.runTimers()
 lst, dun = steps(ns)
 check("...then builds them in", find(lst, t="D", dungeon="wc") is not None)
 
+# your place on a dungeon step that's gone at the next rebuild (you did the
+# quest, say): the place stays where it was - not back at the start, or at
+# some quest you can hand in at any level far down the route
+L, W, ns = fresh()
+lst, dun = steps(ns)
+k = find(lst, t="A", q=990001)
+st = ns._dbg.state()
+st.pos, st.hold, st.force = lst[k].i, False, None
+W.tick()
+check("your place on a dungeon pick-up", ns._dbg.state().pos == lst[k].i, (ns._dbg.state().pos, lst[k].i))
+W.dq[990001].notYours = True
+ns._dbg.k().Rebuild()
+W.tick()
+lst2 = ns._dbg.list()
+by2 = {lst2[n].i: n for n in range(1, len(lst2) + 1)}
+now = by2.get(ns._dbg.state().pos)
+check("...gone at the next rebuild: your place is the step after it", now is not None and k - 2 <= now <= k + 3,
+      (now, k, ns._dbg.state().pos))
+
+# logging in with your place on a dungeon step, before Questie has its dungeon
+# lists: the guide waits at the route step after it, then goes back to it
+L, W, ns = fresh()
+lst, dun = steps(ns)
+k = find(lst, t="A", q=990001)
+st = ns._dbg.state()
+st.pos, st.hold, st.force = lst[k].i, False, None
+W.tick()
+saved = {f: st[f] for f in ("pos", "after", "routeSignature")}
+check("...the route step after your place is kept with it", saved["after"] is not None and saved["after"] < 1000000, saved)
+L, W, ns = fresh(setup=f"""W.dungeonsLoading = true
+HARNESS_NS.cdb.guide = {{ horde = {{ done = {{}}, pos = {saved['pos']}, after = {saved['after']}, routeSignature = "{saved['routeSignature']}" }} }}""")
+lst, dun = steps(ns)
+by = {lst[n].i: n for n in range(1, len(lst) + 1)}
+check("logged in before the dungeon lists: waiting at the route step after your place",
+      ns._dbg.state().pos == saved["after"] or (by.get(ns._dbg.state().pos) or 0) >= by.get(saved["after"], 10 ** 9),
+      (ns._dbg.state().pos, saved))
+check("...not sent back to the start", (by.get(ns._dbg.state().pos) or 0) > 100, by.get(ns._dbg.state().pos))
+W.dungeonsLoading = False
+W.giversWaiter()
+W.runTimers()
+W.tick()
+check("...and back on the dungeon pick-up once they're in", ns._dbg.state().pos == saved["pos"], (ns._dbg.state().pos, saved))
+
 # the menu on a dungeon step
 L, W, ns = fresh()
 lst, dun = steps(ns)
