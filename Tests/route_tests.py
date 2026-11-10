@@ -5,6 +5,7 @@
 # Run: python Tests/route_tests.py
 import json
 import os
+import re
 import sys
 import time
 from lupa import LuaRuntime
@@ -129,13 +130,26 @@ for _ in range(5):
         turnin(W, s.q)
     W.pos = L.table_from({1: s.x or yaw.x, 2: s.y or yaw.y})
     W.tick()
-check("...then the other one within a few steps", handed, trail)
-check("...without being sent out of the village first", not far, far)
+# the other is 4% of the map away (240 yards here): not "right there", so the route may go
+# on first - but it isn't lost: it's handed in before the route leaves Mulgore
+if not handed:
+    W.zone = "Mulgore"
+    leave = next(k for k in range(k_yaw, len(lst) + 1) if lst[k].zoneName and lst[k].zoneName != "Mulgore"
+                 and lst[k].races and "tauren" in list(lst[k].races.values()))
+    ns._dbg.state().pos = lst[leave - 1].i
+    for q in (764, 765):  # back in the village, without the Venture Co. quests the trail took
+        W.log[q] = None
+    W.pos = L.table_from({1: yaw.x, 2: yaw.y})
+    W.tick()
+    c = cur(ns)
+    handed = c and c[0] == "T" and c[1] == other
+    print("   before leaving Mulgore:", c, "| trail before:", trail[:3])
+check("...then the other one: right after, or before the route leaves Mulgore", handed, trail)
 
 # 5. following a zone starts at its first step left to do - not at an old bookmark at its end
 L, W, ns = fresh(race="Orc", raceId=2, level=24)
 lst = ns._dbg.list()
-sec = "Hillsbrad Foothills & The Barrens (25-27)"
+sec = next(lst[k].section for k in range(1, len(lst) + 1) if (lst[k].section or "").startswith("Hillsbrad Foothills"))
 ks = [k for k in range(1, len(lst) + 1) if lst[k].section == sec]
 st = ns._dbg.state()
 st.zoneMarks = L.table_from({"Hillsbrad Foothills": lst[ks[-1]].i})
@@ -251,13 +265,13 @@ def find(lst, **want):
 
 
 # a top-up to a part-way level
-L, W, ns, lst = playing(level=16)
-k = find(lst, t="N", lvlBelow=16.51)
-check("the route has a top-up to level 16.51", k is not None)
+L, W, ns, lst = playing(level=29)
+k = find(lst, t="N", lvlBelow=29.49)
+check("the route has a top-up to level 29.49", k is not None)
 W.xp = 400
-check("at level 16.4 the top-up applies", ns._dbg.whenHolds(lst[k]))
+check("at level 29.4 the top-up applies", k is not None and ns._dbg.whenHolds(lst[k]))
 W.xp = 600
-check("at level 16.6 it doesn't, and passes by itself", not ns._dbg.whenHolds(lst[k]) and ns._dbg.passed(k))
+check("at level 29.6 it doesn't, and passes by itself", k is not None and not ns._dbg.whenHolds(lst[k]) and ns._dbg.passed(k))
 
 # the way past a group quest: only if you skipped the quest
 L, W, ns, lst = playing(level=42)
@@ -323,6 +337,10 @@ check("over the sea from the step, inn on its side: hearth", hint is not None an
 L, W, ns, lst = playing(level=20)
 k = find(lst, t="TR", noSkill="Two-Handed Axes")
 check("a Warrior's route offers Two-Handed Axes", k is not None and lst[k].moneyMin == 1000)
+# (the quest after it in your log: otherwise the step is passed with it, as you'd moved on)
+nxt = next(n for n in range(k + 1, len(lst) + 1) if lst[n].q and lst[n].t in ("C", "T"))
+W.log[lst[nxt].q] = "open"
+W.tick()
 W.money = 999
 check("short of the fee: passed", ns._dbg.passed(k))
 W.money = 1000
@@ -332,6 +350,68 @@ W.money = 1000
 W.skills = L.table_from({1: "Two-Handed Axes"})
 check("already learned: passed", ns._dbg.passed(find(lst, t="TR", noSkill="Two-Handed Axes")))
 
+# a "finish it off" step: only while your bags hold fewer than it needs
+L, W, ns, lst = playing(level=16)
+fake = L.table_from({"hasBelow": L.table_from({1: 5087, 2: 7})})
+W.items = L.table_from({5087: 6})
+check("six beaks of seven: the finish-off step applies", ns._dbg.whenHolds(fake))
+W.items = L.table_from({5087: 7})
+check("seven: it doesn't", not ns._dbg.whenHolds(fake))
+check("the route has finish-off steps", find(lst, t="C", q=844, optional=None) is not None and "hasBelow" in open(ADDON + "GuideData.lua", encoding="utf-8").read())
+# a hand-in for a quest you may have picked up elsewhere: only once it's ready
+fake = L.table_from({"ready": 865})
+W.log[865] = "open"
+W.fire("QUEST_LOG_UPDATE"); W.tick()
+check("in your log, not finished: the hand-in doesn't apply yet", not ns._dbg.whenHolds(fake))
+W.log[865] = "complete"
+W.time = W.time + 1; W.tick()
+check("ready: it applies", ns._dbg.whenHolds(fake))
+
+# an optional group quest you passed by (WANTED: Bruuz, its poster behind you): its
+# objective and hand-in further on don't hold you up, or point you at an elite
+L, W, ns, lst = playing(race="Orc", raceId=2, level=17)
+c = next(k for k in range(1, len(lst) + 1) if lst[k].t == "C" and lst[k].q == 92706)
+a = max(k for k in range(1, c) if lst[k].t == "A" and lst[k].q == 92706)
+check("Bruuz's poster comes before its objective, with steps between", c - a > 2, (a, c))
+check("never taken: its objective is passed", ns._dbg.passed(c))
+accept(W, 92706)
+nxt = next(n for n in range(c + 1, len(lst) + 1) if lst[n].q and lst[n].t in ("C", "T") and not lst[n].optional)
+accept(W, lst[nxt].q)  # (and the route's next quest, as you'd have it by then)
+W.time = W.time + 1; W.tick()
+check("taken: it's yours to do", not ns._dbg.passed(c))
+
+# a new route from upstream: your place moves over to the same quest step
+route = open(ADDON + "GuideData.lua", encoding="utf-8").read()
+was_sig = re.search(r'hordeWas = "([^"]+)"', route)
+check("the route says which route it replaced", was_sig is not None)
+L, W, ns, lst = playing(race="Orc", raceId=2, level=30)
+k = next(n for n in range(600, len(lst) + 1) if lst[n].was and lst[n].t == "A")
+old_quest_step = lst[k].was
+st = ns._dbg.state()
+st.routeSignature, st.pos, st.force, st.hold = was_sig.group(1), old_quest_step, None, False
+st.done = L.table_from({old_quest_step: True})
+ns._dbg.k().Rebuild()
+st = ns._dbg.state()
+lst = ns._dbg.list()
+by = {lst[n].i: n for n in range(1, len(lst) + 1)}
+check("from the route it replaced: your place is the same quest step", by.get(st.pos) is not None and by[st.pos] >= k and lst[by[st.pos]].section == lst[k].section,
+      (st.pos, lst[k].i, by.get(st.pos), k))
+check("...and its skip came with it", st.done[lst[k].i] is True)
+# a place on a travel step (not matched: they repeat) goes on to the next quest step
+L, W, ns, lst = playing(race="Orc", raceId=2, level=30)
+olds = sorted(lst[n].was for n in range(1, len(lst) + 1) if lst[n].was)
+gap = next(o for o, p in zip(olds, olds[1:]) if p - o > 1 and o > 1500)  # an old step with no match after it
+st = ns._dbg.state()
+st.routeSignature, st.pos, st.force, st.hold = was_sig.group(1), gap + 1, None, False
+ns._dbg.k().Rebuild()
+st = ns._dbg.state()
+lst = ns._dbg.list()
+after = min(o for o in olds if o > gap)  # the old route's next quest step after it
+nxt = next(n for n in range(1, len(lst) + 1) if lst[n].was == after)
+by = {lst[n].i: n for n in range(1, len(lst) + 1)}
+check("...a place on a travel step goes on to the next quest step", by.get(st.pos) is not None and by[st.pos] >= nxt
+      and lst[by[st.pos]].section == lst[nxt].section, (st.pos, by.get(st.pos), nxt))
+
 # only with the quest in your log
 L, W, ns, lst = playing(level=12)
 fake = L.table_from({"onQuest": L.table_from({1: 871, 2: 872})})
@@ -340,7 +420,7 @@ W.log[872] = "open"
 W.fire("QUEST_LOG_UPDATE")
 W.tick()
 check("one of them in the log: applies", ns._dbg.whenHolds(fake))
-check("a quest done on the way never stops the route", lst[find(lst, t="C", q=871, optional=True) or 1].optional)
+check("a quest done on the way never stops the route", lst[find(lst, t="C", q=869, optional=True) or 1].optional)
 
 # handed in under another ID (Forever does this): noticed, though the list of names is kept between checks
 L, W, ns, lst = playing(level=12)
@@ -357,14 +437,15 @@ check("a quest of the same name handed in under another ID counts", ns._dbg.why(
 # the last step you'd landed on
 L, W, ns = fresh(race="Orc", raceId=2, level=19)
 ns.db.guideListLayout = False
-ns.GuideFollowSection("The Barrens (19-23)")
+BARRENS = "The Barrens (15-21)"
+ns.GuideFollowSection(BARRENS)
 W.tick()
 places, back = [ns._dbg.places()[0]], None
 for press in range(30):
     ns._dbg.stepPlace(1)
     W.tick()
     s_, j, _ = ns.GuideCurrent()
-    if s_.section != "The Barrens (19-23)":
+    if s_.section != BARRENS:
         break
     at = ns._dbg.places()[0]
     if at < places[-1] and back is None:
@@ -410,13 +491,19 @@ check("clicking Accept Egg Hunt marks Korran, not a nearby detour", got == ("Egg
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)
 check("no deathskips: they're opt-in upstream, and never on Hardcore", "Deathskip" not in data)
-check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.4 (guides/forever), GPL-3.0-only" in data)
+check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.5 (guides/forever), GPL-3.0-only" in data)
 # Mulgore is one of the maps Forever redrew: typed in Era's frame, converted to Forever's
 check("a typed Mulgore point lands where it is on Forever's map", 'text="The Venture Co. Mine", z=215, x=61.19, y=49.31' in data)
-for race, rid, want in (("Orc", 2, "The Barrens (12-16)"), ("Troll", 8, "The Barrens (12-16)"), ("Tauren", 6, "The Barrens (12-16)")):
+# every start goes on to Silverpine Forest (the route's shared part starts there since 0.3.5)
+want = "Silverpine Forest (12-15)"
+for race, rid, start in (("Orc", 2, "Durotar"), ("Troll", 8, "Durotar"), ("Tauren", 6, "Mulgore"),
+                         ("Scourge", 5, "Tirisfal Glades"), ("Skyborne", 96, "Zephras Isle")):
     L, W, ns, lst = playing(race=race, raceId=rid)
-    secs = [lst[k].section for k in range(1, len(lst) + 1)]
-    check(f"{race} goes from the start zone to {want}", want in secs and secs[0].split(" (")[0] in ("Durotar", "Mulgore"), secs[0])
+    secs = []
+    for k in range(1, len(lst) + 1):
+        if not secs or secs[-1] != lst[k].section:
+            secs.append(lst[k].section)
+    check(f"{race} goes from {start} to {want}", secs[0].startswith(start) and secs[1] == want, secs[:3])
 
 # 9. walk the route: do whatever the guide shows, see that it never gets stuck
 

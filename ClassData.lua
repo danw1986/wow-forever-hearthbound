@@ -1,6 +1,6 @@
 -- Each class's specs and stat weights, class quest chains and talent plans.
 -- Rebuilt by Tests/class_import.py.
--- Adapted from github.com/fitzforge/polestar v0.3.4, GPL-3.0-only.
+-- Adapted from github.com/fitzforge/polestar v0.3.5, GPL-3.0-only.
 -- weights: per spec, one point of the main stat is about 1 (dps = melee weapon DPS, rdps = ranged).
 -- quests: min/max = levels; ends = the hand-ins that finish it (the first that fits your race);
 -- spells = what it teaches, also a sign it's done; gear = it pays gear too, so finish it anyway.
@@ -557,7 +557,7 @@ ns.CLASS_DATA = {
       {id="poisons", title="Poisons", min=20, max=26, why="Forever teaches Poisons through this chain, not the trainer; the Thistle Tea recipe comes with it.", faction="Horde", spells={2842}, gear=true, ends={{q=2480}}},
       {id="the-horn-of-xelthos", title="The Horn of Xelthos", min=23, max=26, why="The Pyrewood Signet Ring, C's payment for a solo job inside Shadowfang Keep.", ends={{q=78307}}},
       {id="ravenholdt", title="Ravenholdt", min=24, max=36, why="Opens Ravenholdt Manor, the hidden rogue house in the Alterac hills, and Myrokos's jobs against the Syndicate.", ends={{q=96786}}},
-      {id="the-eye-of-bhossca", title="The Eye of Bhossca", min=25, max=35, why="The Ruby-Adorned Blade, C's payment for a solo job inside the Scarlet Monastery.", ends={{q=78699}}},
+      {id="the-eye-of-bhossca", title="The Eye of Bhossca", min=30, max=35, why="The Ruby-Adorned Blade, C's payment for a solo job inside the Scarlet Monastery.", ends={{q=78699}}},
       {id="the-azure-key", title="The Azure Key", min=50, max=52, why="Ravenholdt reputation and experience at 50; Classic's item choice may be gone on Forever.", ends={{q=8236}}},
     },
     builds = {
