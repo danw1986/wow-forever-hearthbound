@@ -486,6 +486,7 @@ local function BuildSettingsPage(page)
     col:Check("Collect enemy cards", "cards",
         "Every different enemy you defeat adds its card to your collection, filed by zone. /hb cards opens it.")
     col:Check("New card pop-up", "cardPopups", "Shows each new card for a few seconds at the top of the screen as you collect it.")
+    col:Check("New card message in chat", "cardChat", "A line in chat naming each new card and how the zone's set is going.")
     col:Check("Card sounds", "cardSounds", "A sound when a card drops and when you take it.")
     col:Check("Card line in enemy tooltips", "cardTooltips",
         "Hovering an enemy says whether you have its card yet, and how many you've defeated.")

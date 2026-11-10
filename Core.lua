@@ -35,6 +35,7 @@ ns.defaults = {
     blizzQuestXP = true, -- the same gold on the game's own XP bar
     cards = true,      -- collect a card for every different enemy you defeat
     cardPopups = true, -- show each new card as it's collected
+    cardChat = true,       -- a "New card" line in chat for each new card
     cardSounds = true,     -- a sound when a card drops and when you take it
     cardTooltips = true,   -- enemy tooltips say whether you have its card
     cardsAutoClaim = false, -- cards go straight to the collection, without looting
