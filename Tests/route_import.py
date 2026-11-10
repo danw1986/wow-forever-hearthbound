@@ -341,6 +341,15 @@ def when_fields(lines, guide_id):
             out["notBound"] = arg
         elif word == "!skill" and len(toks) > 2 and toks[2][1] == "1":
             out["noSkill"] = arg
+        elif word == "complete" and arg.isdigit():
+            out["ready"] = int(arg)  # the quest is in your log, ready to hand in
+        elif word == "!has" and arg.isdigit():
+            count = re.fullmatch(r"x(\d+)", toks[2][1]) if len(toks) > 2 else None
+            out["hasBelow"] = [int(arg), int(count.group(1)) if count else 1]
+        elif word == "dungeon":
+            out["_skip"] = True  # a dungeon run you opt into upstream: the guide adds its own runs
+        elif word == "!dungeon":
+            pass  # the way for those not running it: everyone here
         else:
             warnings.append(f"{guide_id}: unknown condition: when {line}")
     return out
@@ -362,7 +371,7 @@ def lua(v):
 
 FIELD_ORDER = ["t", "q", "obj", "name", "text", "gv", "gw", "optional", "group", "foreverOnly", "z", "x", "y", "target",
                "note", "tip", "races", "classes", "lvlBelow", "lvlMin", "moneyMin", "noSkill", "bound", "notBound", "onQuest", "solo",
-               "section", "zoneName", "p", "place"]
+               "ready", "hasBelow", "section", "zoneName", "p", "place", "was"]
 PLACE_ID = [0]  # each upstream step: one place, its goals shown together
 
 
@@ -406,6 +415,8 @@ def convert(guide, place, out):
         if not sok:
             continue
         step_fields = when_fields(step_when, guide["guide"])
+        if step_fields.pop("_skip", False):
+            continue
         if along:
             step_fields["optional"] = True  # done on the way: it never stops the route
         PLACE_ID[0] += 1
@@ -414,7 +425,8 @@ def convert(guide, place, out):
             verb, args, note = it["verb"], it["args"], it["note"]
             # die: a deathskip, for those who opt in upstream (never on Hardcore): the next
             # step's arrow gets you there on foot. label, loop: only the upstream engine uses them
-            if verb in ("only", "tip", "zone", "coords", "when", "along", "label", "loop", "die"):
+            # background: an along step's goals worked over the whole stay (optional here already)
+            if verb in ("only", "tip", "zone", "coords", "when", "along", "background", "label", "loop", "die"):
                 continue
             # positional and modifiers
             pos = args[0][1] if args else None
@@ -672,20 +684,24 @@ for root, _, files in os.walk(os.path.join(SRC, "horde")):
             guides[g["guide"]] = g
 starts = ["forever/horde/skyborne/01-zephras-isle", "forever/horde/orc/01-durotar", "forever/horde/troll/01-durotar",
           "forever/horde/tauren/01-mulgore", "forever/horde/undead/01-tirisfal-glades"]
-order, seen = [], set()
-for s in starts:
-    gid = s
-    while gid and gid not in seen and gid in guides:
-        if gid == "forever/horde/02-the-barrens" and s != starts[-1]:
-            break  # the shared chain goes once, after the last start
-        order.append(gid)
-        seen.add(gid)
+def follow(gid):
+    """a guide and the ones its "next" lines lead to, in order"""
+    out = []
+    while gid and gid in guides and gid not in out:
+        out.append(gid)
         gid = (guides[gid].get("next") or "").split(",")[0].strip() or None
-gid = "forever/horde/02-the-barrens"
-while gid and gid not in seen and gid in guides:
-    order.append(gid)
-    seen.add(gid)
-    gid = (guides[gid].get("next") or "").split(",")[0].strip() or None
+    return out
+
+
+# each start's own guides, then the shared chain from where every start's path meets
+# (The Barrens up to 0.3.4, Silverpine Forest since 0.3.5)
+chains = [follow(s) for s in starts]
+shared = next(g for g in chains[0] if all(g in c for c in chains))
+order = []
+for c in chains:
+    order += [g for g in c[:c.index(shared)] if g not in order]
+order += chains[0][chains[0].index(shared):]
+seen = set(order)
 missing = [g for g in guides if g not in seen]
 if missing:
     warnings.append(f"guides not in the chain: {missing}")
@@ -748,10 +764,54 @@ print("quest steps without coordinates:", len(noxy), [(s["t"], s["q"], s["name"]
 for w in sorted(set(warnings)):
     print("warn:", w)
 
+def carry_over(path):
+    """Your place, skips and bookmarks carried over from the route being replaced:
+    each new quest step is matched to the same quest step of the old one (same
+    objective, races and classes, in order) and says its old number as was=N.
+    Travel steps aren't matched - "Tarren Mill flight master" comes up on several
+    visits - so a place on one moves on to the next quest step (Guide.lua).
+    Returns the old route's signature, worked out as Guide.lua does."""
+    if not os.path.exists(path):
+        return None
+    old = []
+    for line in open(path, encoding="utf-8"):
+        if not re.match(r'\s*\{t="', line):
+            continue
+        get = lambda p: (re.search(p, line) or [None, None])[1]
+        old.append({"t": get(r'\{t="(\w+)"'), "q": get(r'\bq=(\d+)'), "obj": get(r'\bobj=(\d+)'),
+                    "races": get(r'races=\{([^}]*)\}'), "classes": get(r'classes=\{([^}]*)\}'),
+                    "text": get(r'\btext="([^"]*)"'), "zone": get(r'zoneName="([^"]*)"')})
+    if not old:
+        return None
+    total = 0
+    for n, s in enumerate(old, 1):
+        total = (total + n * ((int(s["q"] or 0)) % 9973 + len(s["t"]))) % 2147483647
+    signature = f"{len(old)}:{old[0]['q'] or 'nil'}:{old[-1]['q'] or 'nil'}:{total}"
+
+    def key(t, q, obj, races, classes, text, zone):
+        if q:
+            return ("q", t, str(q), str(obj or ""), races or "", classes or "")
+        return None
+    free = {}
+    for n, s in enumerate(old, 1):
+        free.setdefault(key(s["t"], s["q"], s["obj"], s["races"], s["classes"], s["text"], s["zone"]), []).append(n)
+    matched = 0
+    for s in steps:
+        races = ", ".join(lua(r) for r in s["races"]) if s.get("races") else None
+        classes = ", ".join(lua(c) for c in s["classes"]) if s.get("classes") else None
+        k = key(s["t"], s.get("q"), s.get("obj"), races, classes, s.get("text"), s.get("zoneName"))
+        if k and free.get(k):
+            s["was"] = free[k].pop(0)
+            matched += 1
+    print(f"carried over: {matched} of {len(steps)} steps match a step of the old route ({len(old)} steps)")
+    return signature
+
+
 if WRITE:
     pack = os.path.join(SRC, "..", "pack.json")
     UPSTREAM = "v" + json.load(open(pack))["version"] if os.path.exists(pack) else "(version not known)"
     path = os.path.join(ADDON, "GuideData.lua")
+    was_signature = carry_over(path)
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("-- Horde 1-60 levelling route for WoW Forever. Quest IDs are QuestieDB's; NPCs, objects and\n")
         fh.write("-- coordinates are filled in from QuestieDB. Rebuilt by Tests/route_import.py.\n")
@@ -766,9 +826,13 @@ if WRITE:
         fh.write("-- place = the stop on the route the step belongs to.\n")
         fh.write("-- Only while it holds (checked as you play): lvlBelow/lvlMin = level, part-way levels too (16.51);\n")
         fh.write("-- moneyMin = copper; noSkill = skill not learned; bound/notBound = hearthstone; onQuest = any in\n")
-        fh.write("-- your log; solo = N: you've neither done nor got quest N (the way past a group quest).\n")
+        fh.write("-- your log; solo = N: you've neither done nor got quest N (the way past a group quest);\n")
+        fh.write("-- ready = Q: Q is in your log ready to hand in; hasBelow = {item, N}: fewer than N in your bags.\n")
+        fh.write("-- was = N: the step's number in the route this one replaced (your place moves over).\n")
         fh.write("local _, ns = ...\nns.HordeGuides = ns.HordeGuides or {}\nns.HordeGuides.horde = {\n")
         for n, s in enumerate(steps, 1):
             fh.write(step_line(s) + f" -- {n}\n")
         fh.write("}\n")
+        if was_signature:
+            fh.write(f'ns.HordeGuides.hordeWas = "{was_signature}" -- the route this one replaced\n')
     print("wrote", path)

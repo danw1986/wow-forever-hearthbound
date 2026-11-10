@@ -507,6 +507,17 @@ function K.WhenHolds(s)
     if s.bound and not BoundAt(s.bound) then return false end
     if s.notBound and BoundAt(s.notBound) then return false end
     if s.solo and (Completed(s.solo) or InLog(s.solo)) then return false end
+    -- a "finish it off" step: only while your bags hold fewer than you need
+    if s.hasBelow then
+        local get = (C_Item and C_Item.GetItemCount) or GetItemCount
+        local n = get and Safe(get, s.hasBelow[1])
+        if type(n) == "number" and n >= s.hasBelow[2] then return false end
+    end
+    -- a hand-in for a quest you may have got elsewhere: only once it's ready
+    if s.ready and questLogReady then
+        local _, complete = InLog(s.ready)
+        if not complete then return false end
+    end
     if s.onQuest and questLogReady then
         for _, q in ipairs(s.onQuest) do
             if InLog(q) then return true end
@@ -833,6 +844,12 @@ local function PassedRaw(j)
     if state.done[s.i] then return true end -- skipped, arrived, flown, trained...
     if QUEST_STEP[s.t] then
         if GameDone(s) or Low(s) then return true end
+        -- the rest of a quest you never took, its pick-up behind you (an optional
+        -- group quest you passed by, say): nothing to do here
+        if s.t ~= "A" and s.optional and NotInLog(s) and not NeedsPickup(s) then
+            local a = acceptAt[s.q]
+            if not (a and a > j) then return true end
+        end
         -- optional (an extra on the way): never holds you up - it's passed
         -- once the next step that isn't optional is done
         if s.optional then
@@ -4744,16 +4761,23 @@ local function Load()
             -- your place, skips and bookmarks move over to the new numbers
             local map = {}
             for n, st in ipairs(data) do if st.was then map[st.was] = n end end
-            local function Move(number) return number and (map[number] or (number >= 1000000 and number) or nil) end
+            -- a step's new number (dungeon and class steps keep theirs)
+            local function Same(number) return number and (map[number] or (number >= 1000000 and number) or nil) end
+            -- a place: the same step, or the next one that's still in the route
+            local function Move(number)
+                if not number or number >= 1000000 then return number end
+                for k = number, number + 80 do if map[k] then return map[k] end end
+            end
             local done = {}
             for number, v in pairs(state.done or {}) do
-                local m = Move(number)
+                local m = Same(number) -- a skip stays on its own step, or goes
                 if m then done[m] = v end
             end
             state.done = done
-            state.pos, state.live, state.force = Move(state.pos), Move(state.live), Move(state.force)
+            state.pos, state.live, state.after = Move(state.pos), Move(state.live), Move(state.after)
+            state.force = Same(state.force)
             for zone, number in pairs(state.zoneMarks or {}) do state.zoneMarks[zone] = Move(number) end
-            for q, number in pairs(state.later or {}) do state.later[q] = Move(number) end
+            for q, number in pairs(state.later or {}) do state.later[q] = Same(number) end
             ns.Print("Guide: the route has been re-ordered - your place and skips came with you.")
         else
             if state.routeSignature then ns.Print("Guide: the route has changed - finding your place in the new one.") end
