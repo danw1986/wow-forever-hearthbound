@@ -768,7 +768,9 @@ local function Announce(name)
         popupQueue[#popupQueue + 1] = { name = name, card = card, count = count }
         ShowNextPopup()
     end
-    ns.Print(format("New card: |cffffd200%s|r  (%s)  |cffc79c6e/hb cards|r", name, count))
+    if ns.db.cardChat ~= false then
+        ns.Print(format("New card: |cffffd200%s|r  (%s)  |cffc79c6e/hb cards|r", name, count))
+    end
     if ns.RefreshCards then ns.RefreshCards() end
 end
 
