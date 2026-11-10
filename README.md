@@ -155,4 +155,4 @@ images and aren't covered by this licence.
 
 ## Version
 
-0.9.5
+0.9.6
