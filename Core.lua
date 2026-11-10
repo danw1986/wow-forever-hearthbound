@@ -105,6 +105,9 @@ ns.defaults = {
     guideSkipGroup = false,  -- leave out group (elite) quests
     guideSkipDungeons = false, -- leave out dungeon steps
     guideNever = {},         -- quest ID -> true: quests you've chosen never to do
+    guideSync = true,        -- share your guide step with party members who have Hearthbound (GuideSync.lua)
+    guideSyncAuto = false,   -- ...and go to the leader's step when they sync, without being asked
+    whatsNew = true,         -- after an update, a window of what's new (WhatsNew.lua)
     positions = {},
     trainer = {}, -- class -> skill list read from the class trainer
     xpTable = {}, -- level -> XP needed, as reported by the client
@@ -332,6 +335,7 @@ end
 ns.On("ADDON_LOADED", function(_, name)
     if name ~= ADDON_NAME then return end
     ns.restoredFromBackup = RestoreFromSeed()
+    ns.freshInstall = HearthboundDB == nil -- nothing saved: a new player, with nothing to tell about updates
     HearthboundDB = HearthboundDB or {}
     for _, key in ipairs(OBSOLETE) do HearthboundDB[key] = nil end
     if HearthboundDB.positions then HearthboundDB.positions.hud = nil end
@@ -435,6 +439,8 @@ SlashCmdList.HEARTHBOUND = function(input)
         if ns.ClearGuideMarker then ns.ClearGuideMarker() end
     elseif cmd == "setup" then
         ns.ShowSetup()
+    elseif cmd == "new" or cmd == "whatsnew" then
+        ns.ShowWhatsNew(true)
     elseif cmd == "mem" or cmd == "memory" then
         ns.MemoryReport()
     elseif cmd == "debug" then
@@ -471,6 +477,7 @@ SlashCmdList.HEARTHBOUND = function(input)
         ns.Print("/hb spec | spec <name> | spec auto - the spec rewards and talent advice follow")
         ns.Print("/hb - open settings")
         ns.Print("/hb setup - run the first-time setup again")
+        ns.Print("/hb new - what's new in this version")
         ns.Print("/hb cards - your enemy card collection, zone by zone")
         ns.Print("/hb plates test - your target's nameplate shows each threat colour in turn")
         ns.Print("/hb left | left 2 | left clear - quests you walked away from: list, mark one, empty")
@@ -487,6 +494,7 @@ SlashCmdList.HEARTHBOUND = function(input)
         ns.Print("/hb guide route - the route overview: every zone with its levels and progress, to follow or skip")
         ns.Print("/hb guide search wolf - find the steps for a quest, NPC or place")
         ns.Print("/hb guide back - back to the zone you were following before, where you left off")
+        ns.Print("/hb guide sync - (party leader) bring party members who have the guide to your step")
         ns.Print("/hb guide unskip - bring back every quest step you've skipped")
         ns.Print("/hb guide unremove - put back every quest you removed from the route")
         ns.Print("/hb guide tidy - quests in your log the route doesn't use (and grey ones), to abandon")

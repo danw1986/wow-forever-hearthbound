@@ -23,6 +23,10 @@ if len(sys.argv) != 2:
 toc = git("show", "HEAD:Hearthbound.toc").decode("utf-8")
 version = re.search(r"^## Version: (\S+)", toc, re.M).group(1)
 needed = {line.strip() for line in toc.splitlines() if line.strip() and not line.startswith("##")} | {"Hearthbound.toc"}
+# players see the release's notes once after updating (WhatsNew.lua): every release needs some
+notes = git("show", "HEAD:WhatsNew.lua").decode("utf-8")
+if not re.search(r'version = "' + re.escape(version) + '"', notes):
+    sys.exit(f"WhatsNew.lua has no entry for {version}: add what's new in it before packing")
 path = os.path.join(sys.argv[1], f"Hearthbound-{version}.zip")
 
 names = []

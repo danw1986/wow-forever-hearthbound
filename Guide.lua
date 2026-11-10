@@ -2586,6 +2586,9 @@ function ns.GuideMoreMenu()
     end
     local removed = count(ns.db.guideNever)
     local items = {}
+    if ns.GuideSyncCan and ns.GuideSyncCan() then
+        items[#items + 1] = { "|cffffd200Sync the party to this step|r", function() ns.GuideSyncParty() end }
+    end
     if not ns.db.guideListLayout then
         -- the card layout: the few things you need while playing; the rest is in the Guide panel
         if state.hold then items[#items + 1] = { "|cff33ff99Back to my step|r", function() ns.GuideResume() end } end
@@ -2987,6 +2990,7 @@ function Refresh()
     if shownStep ~= cur then
         shownStep = cur
         if ns.UpdatePanel and ns.db.guidePanel then ns.UpdatePanel() end
+        if ns.GuideSyncMoved then ns.GuideSyncMoved() end
     end
     if not frame then return end
     local show = ns.db.guide and #list > 0
@@ -3494,6 +3498,12 @@ function K.BuildCard()
         if state.hold then ns.GuideResume() else ns.GuideNext() end
     end, "Skip", "Skip the goal you're on (right-click a goal to skip just that one, or bring one back).")
     cv.skip:SetPoint("RIGHT", cv.more, "LEFT", -4, 0)
+    -- party leader with others on the guide: bring them to this step (GuideSync.lua)
+    cv.sync = K.TextButton(cv, "Sync", 11, function() if ns.GuideSyncParty then ns.GuideSyncParty() end end)
+    cv.sync:SetPoint("RIGHT", cv.skip, "LEFT", -4, 0)
+    cv.sync:SetScript("OnEnter", function(self) if ns.GuideSyncTooltip then ns.GuideSyncTooltip(self) end end)
+    cv.sync:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    cv.sync:Hide()
     Rule(54)
     -- the place
     cv.pin = cv:CreateTexture(nil, "ARTWORK")
@@ -3618,6 +3628,12 @@ function K.RefreshCard()
     cv.next:SetAlpha(K.PlaceStart(1) and 1 or 0.3)
     cv.skip.text:SetText(looking and "|cff33ff99Back to my step|r" or "Skip")
     cv.skip:SetWidth(cv.skip.text:GetStringWidth() + 12)
+    local sync = ns.GuideSyncCan and ns.GuideSyncCan()
+    cv.sync:SetShown(sync and true or false)
+    if sync then
+        cv.sync.text:SetText(sync == "apart" and "|cffffd200Sync|r" or "|cff999999Sync|r")
+        cv.sync:SetWidth(cv.sync.text:GetStringWidth() + 12)
+    end
     -- the place: the step's place name, or who you're seeing, or the step itself
     local steps = K.CardSteps(cur)
     cv.place:SetText(s.place or (s.target and s.target.name) or s.text or s.name or "")
@@ -4860,6 +4876,53 @@ function ns.GuideCurrent()
 end
 ns.GuideStepTitle = function(s) return s and Title(s) or "" end
 
+-- Party sync (GuideSync.lua). A point is the step on screen as another
+-- player's guide can find it: its number in the route, the next plain route
+-- step from it (for a guide without that step - another race's, a class quest,
+-- a dungeon run left out), its kind and quest. makePlace: if you're only
+-- looking at the step, make it your place first.
+function ns.GuideSyncPoint(makePlace)
+    if not (state and list[cur]) then return nil end
+    if makePlace and state.hold then Go(cur) end
+    local s = list[cur]
+    local plain
+    for j = cur, #list do
+        if list[j].i < 1000000 then plain = list[j].i break end
+    end
+    return { sig = state.routeSignature, i = s.i, after = plain or s.i, t = s.t, q = s.q, title = Title(s), index = cur }
+end
+
+-- the step in your guide for someone else's point: the same step on the same
+-- route, else the next route step after it you have, else (a different
+-- version of the route) the same quest step. nil: none.
+function ns.GuideSyncFind(p)
+    if not (state and p and #list > 0) then return nil end
+    if p.sig and p.sig == state.routeSignature then
+        if p.i and byNumber[p.i] then return byNumber[p.i] end
+        for j = 1, #list do
+            local i = list[j].i
+            if p.after and i < 1000000 and i >= p.after then return j end
+        end
+    end
+    if p.t and p.q then
+        for j = 1, #list do
+            if list[j].t == p.t and list[j].q == p.q then return j end
+        end
+    end
+end
+
+function ns.GuideSyncTitle(j) return list[j] and Title(list[j]) end
+
+-- go to step j, as your place (one you'd skipped comes back)
+function ns.GuideSyncGo(j)
+    if not (state and list[j]) then return end
+    state.done[list[j].i] = nil
+    Go(j)
+    MarkStep()
+end
+
+function ns.GuideRefresh() if state then Refresh() end end
+
 -- the guides there are: { key, name, desc, steps, minLevel, maxLevel }
 function ns.GuideList()
     if K.guideList then return K.guideList end
@@ -5095,6 +5158,7 @@ function ns.GuideCommand(arg)
         return
     end
     if arg == "here" then return ns.GuideHere() end
+    if arg == "sync" then return ns.GuideSyncParty and ns.GuideSyncParty() end
     if arg == "back" or arg == "previous" then return ns.GuidePreviousZone() end
     if arg == "unskip" then
         -- every quest step you've skipped comes back (travel and notes stay passed)
