@@ -432,6 +432,11 @@ local function BuildSettingsPage(page)
     col:Slider("Route steps close by (yards)", "guideNearYards", "A pick-up, quest or hand-in from the route this close to you becomes the step to do, so quests near each other get done together.", 30, 300, 10, "%d")
     col:Check("Show my class quests", "guideClassQuests",
         "Your class's quests from QuestieDB - including Forever's new ones, like the Undead paladin's - as a Class quest line: the ones in your log, then the ones you can pick up. Click it to follow it.")
+    col:Header("Party")
+    col:Check("Party guide sync", "guideSync",
+        "Party members who have Hearthbound share which guide step they're on. As party leader you get a Sync button on the guide (and an offer when someone is on a different step) to bring everyone to your step. As a member you're asked before your guide moves. /hb guide sync")
+    col:Check("Follow the party leader without asking", "guideSyncAuto",
+        "When the party leader syncs the party, your guide goes straight to their step instead of asking first.")
     col:Header("Route")
     col:Button("Route overview: zones to follow or skip  >", function() ns.ShellOpen("guide", "zones") end)
     local find = col:ButtonPair("Find my place", function() if ns.GuideCommand then ns.GuideCommand("find") end end,
@@ -580,6 +585,8 @@ local function BuildSettingsPage(page)
     col:Check("Level-up screenshots", "screenshots", "Takes a screenshot each time you level up - a picture diary of your journey.")
     col:Check("Minimap button", "showMinimap", "Left-click for settings, right-click for quests, hover for a summary.")
     col:Check("Welcome back window", "welcomeBack", "On login: time away, rested XP gained, your last session and your alts.")
+    col:Check("What's new after an update", "whatsNew",
+        "The first time you log in after updating Hearthbound, a window shows what's new, with a link to any new settings. /hb new shows it again.")
     col:Check("Talent point reminder", "talentReminder", "A pop-up and a panel line when you have talent points to spend.")
 
     -- Panel order

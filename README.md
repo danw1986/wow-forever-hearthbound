@@ -34,6 +34,9 @@ tools into one window, and keeps a record of each character's journey to 60.
 - Dungeon runs built into the route: it picks up a dungeon's quests as you pass
   their givers, sends you in at the right level, then hands them in. Leave out
   any dungeon (right-click its step, or on its page), or all of them in Settings
+- Party sync: party members who have Hearthbound see each other's step, and the
+  party leader can bring everyone to the leader's step (`/hb guide sync`).
+  Members are asked first, or can choose to follow the leader without asking
 
 **Built around your character**
 - Recognises your class and spec: the talent tree with the most points, or the
@@ -78,6 +81,7 @@ tools into one window, and keeps a record of each character's journey to 60.
 - One shell window with a tab rail, menu column and content panel
 - Optional Hearthbound-styled nameplates with threat colours
 - Minimap button, welcome-back summary on login, first-time setup wizard
+- A "What's new" window once after each update, with links to new settings (`/hb new`)
 - Settings profiles (export / import as text) and a debug report
 
 ## Installation

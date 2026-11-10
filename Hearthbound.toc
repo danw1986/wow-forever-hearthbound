@@ -41,6 +41,7 @@ QuestTab.lua
 Stats.lua
 Milestones.lua
 Welcome.lua
+WhatsNew.lua
 Training.lua
 Travel.lua
 Supplies.lua
@@ -65,6 +66,7 @@ GuideLearn.lua
 GuideOnTheWay.lua
 Guide.lua
 GuideRoute.lua
+GuideSync.lua
 GuideItemButton.lua
 GuideLogTidy.lua
 GuideMap.lua
