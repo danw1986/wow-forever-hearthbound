@@ -13,6 +13,10 @@ ns.WHATS_NEW = {
     { version = "0.9.8", items = {
         { "Quests for every new dungeon",
           "The dungeon journal now lists the quests for The Drowned City, Krol'dok Stronghold, Alcaz Island Prison and Blackmaw Hold, and the missing ones for Excavation Site and Dalaran: who gives each one, where, and the rewards. A few givers aren't known yet and say so." },
+        { "All of Ruins of Lordaeron in the guide",
+          "The guide now runs Ruins of Lordaeron at 21, when the route is back by the Undercity, with The New Plague and (for the Undead) The Wrath of Rath'mael: the route picks up the quests they need first on the way, A Recipe For Death in Silverpine and Rear Guard Patrol in Tirisfal. The dungeon journal also says where a quest's \"do first\" chain starts." },
+        { "Wailing Caverns with Leaders of the Fang",
+          "The guide now waits for the Crossroads hand-in that opens Hamuul Runetotem's chain, so the Wailing Caverns run takes in Nara Wildmane and Leaders of the Fang too." },
     } },
     { version = "0.9.7", items = {
         { "Achievements in party and guild chat",

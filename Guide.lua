@@ -4334,6 +4334,7 @@ end
 K.DUNGEON_STEP_BASE = 2000000 -- quest steps: + id * 4 (+0 pick up, +2 hand in)
 K.DUNGEON_RUN_BASE = 3000000  -- the run itself: + a number from the dungeon's key
 K.DUNGEON_NEAR = 1500 -- yards: a giver this near the entrance is worth the trip, a route step this near is "there"
+K.PICKUP_NEAR = 250   -- yards: a route step this near a dungeon quest's giver is where to pick it up
 
 function K.KeyNumber(key)
     local n = 0
@@ -4451,6 +4452,8 @@ function K.MergeDungeon(d, ids, c, Put)
     for _, info in ipairs(qs) do levels[#levels + 1] = info.level or d.min end
     table.sort(levels)
     local runLevel = math.max(d.min + 1, math.min(d.max - 3, (levels[math.ceil(#levels / 2)] or d.min) - 1))
+    -- a dungeon can say when the route passes it (d.guideLevel): its quests' levels can be above its own
+    if d.guideLevel then runLevel = d.guideLevel end
     -- picked up before the run, so you need to be able to take them by then
     for n = #qs, 1, -1 do
         local need = qs[n].requiredLevel or 0
@@ -4475,6 +4478,32 @@ function K.MergeDungeon(d, ids, c, Put)
         end
         if best and (not bestD or bestD < K.DUNGEON_NEAR * 3) then runSlot = best end
     end
+    -- a quest picked up where the route hands in what it needs first, soon after
+    -- this (the next in a chain, from the same place): the run waits for that
+    local function Done(p) return ns.QuestDone and ns.QuestDone(p) end
+    local function Earliest(list)
+        local e
+        for _, p in ipairs(list) do
+            if Done(p) then return nil end
+            local t = c.turnInAt[p]
+            if t and (not e or t < e) then e = t end
+        end
+        return e
+    end
+    local later = runSlot
+    for _, info in ipairs(qs) do
+        local s = info.start
+        local gw = s and s.mapID and K.SpotWorld(s)
+        local needs = { Earliest(info.preSingle or K.NONE) }
+        for _, p in ipairs(info.preGroup or K.NONE) do
+            if not Done(p) then needs[#needs + 1] = c.turnInAt[p] end
+        end
+        for _, t in ipairs(needs) do
+            local rw = gw and t >= runSlot and levelAt[t] <= runLevel + 3 and c.world(t)
+            if rw and WorldDist(rw, gw) < K.PICKUP_NEAR * 2 then later = math.max(later, t + 1) end
+        end
+    end
+    runSlot = later
     local runEnd = math.min(#route, runSlot + 250)
     for k = runSlot, runEnd do if levelAt[k] > runLevel + 4 then runEnd = k break end end
     local runI = K.DUNGEON_RUN_BASE + K.KeyNumber(d.key)
@@ -4485,6 +4514,14 @@ function K.MergeDungeon(d, ids, c, Put)
     -- the last time the route is on a map between two places, or nil
     local function LastOn(mapID, from, to)
         for k = to, from, -1 do if maps[k] == mapID then return k end end
+    end
+    local function NearOn(sp, from, to)
+        local w = K.SpotWorld(sp)
+        if not w then return nil end
+        for k = to, from, -1 do
+            local rw = maps[k] == sp.mapID and c.world(k)
+            if rw and WorldDist(rw, w) < K.PICKUP_NEAR then return k end
+        end
     end
     local function FirstOn(mapID, from, to)
         for k = from, to do if maps[k] == mapID then return k end end
@@ -4522,7 +4559,8 @@ function K.MergeDungeon(d, ids, c, Put)
             for _, p in ipairs(info.preSingle) do if c.turnInAt[p] then from = math.max(from, c.turnInAt[p] + 1) end end
             for _, p in ipairs(info.preGroup) do if c.turnInAt[p] then from = math.max(from, c.turnInAt[p] + 1) end end
             for _, p in ipairs(info.deps or K.NONE) do from = math.max(from, p.slot or from) end
-            local slot = from < runSlot and LastOn(s.mapID, from, runSlot - 1) or nil
+            -- the last time the route is by the giver, else the last time it's on that map
+            local slot = from < runSlot and (NearOn(s, from, runSlot - 1) or LastOn(s.mapID, from, runSlot - 1)) or nil
             info.fallback = slot == nil
             info.slot = slot or runSlot
             -- the route never passes its giver: only worth a trip if it's near the dungeon
@@ -4698,6 +4736,26 @@ local function QStepLevel(s)
     return level and math.max(1, level - 3) or nil
 end
 
+-- Hearthbound's own steps for this route (GuideExtras.lua): route step number ->
+-- the steps that go straight after it. Each group's anchor is the first step
+-- with its kind, quest and objective (no obj: a step without one).
+function K.ExtrasAfter(data, edition)
+    local out = {}
+    local all = ns.HordeGuideExtras
+    local groups = type(all) == "table" and type(all[edition]) == "table" and all[edition] or K.NONE
+    for _, g in ipairs(groups) do
+        local a = g.after or {}
+        for n, s in ipairs(data) do
+            if s.t == a.t and s.q == a.q and s.obj == a.obj then
+                out[n] = out[n] or {}
+                for _, e in ipairs(g.steps) do table.insert(out[n], e) end
+                break
+            end
+        end
+    end
+    return out
+end
+
 local function Load()
     local guides = ns.HordeGuides or {}
     edition = guides[ns.db.guideEdition] and ns.db.guideEdition
@@ -4708,10 +4766,18 @@ local function Load()
     list, byNumber, targets, acceptAt, pickupSteps, nameAliases, itemSteps = {}, {}, {}, {}, {}, {}, {}
     local route = {}
     routeQuests = {}
+    local extras = K.ExtrasAfter(data, edition)
     for n, s in ipairs(data) do
         s.i = s.i or n
         if s.q then routeQuests[s.q] = true end
         if Applies(s, race, class) then route[#route + 1] = s end
+        -- Hearthbound's own steps (GuideExtras.lua), numbered between this one and the next
+        for k, e in ipairs(extras[n] or K.NONE) do
+            e.i = n + k / 64 -- (a fraction a saved number keeps exactly)
+            e.section, e.zoneName = e.section or s.section, e.zoneName or s.zoneName
+            if e.q then routeQuests[e.q] = true end
+            if Applies(e, race, class) then route[#route + 1] = e end
+        end
     end
     local level = 1
     routeLevel = {}

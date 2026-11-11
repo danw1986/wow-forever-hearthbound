@@ -96,6 +96,7 @@ def fresh(level=18, setup=""):
     if setup:
         L.execute(setup)
     W.load(ADDON + "GuideData.lua")
+    W.load(ADDON + "GuideExtras.lua")
     W.load(ADDON + "Guide.lua")
     for fn in ns.inits.values():
         fn()

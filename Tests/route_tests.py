@@ -44,6 +44,7 @@ def fresh(race="Tauren", raceId=6, cls="WARRIOR", classId=1, level=1):
     ns = L.globals().HARNESS_NS
     ns.db.guideEdition = "horde"
     W.load(ADDON + "GuideData.lua")
+    W.load(ADDON + "GuideExtras.lua")
     W.load(ADDON + "Guide.lua")
     for fn in ns.inits.values():
         fn()
@@ -505,6 +506,34 @@ for race, rid, start in (("Orc", 2, "Durotar"), ("Troll", 8, "Durotar"), ("Taure
             secs.append(lst[k].section)
     check(f"{race} goes from {start} to {want}", secs[0].startswith(start) and secs[1] == want, secs[:3])
 
+# 8b. Hearthbound's own steps (GuideExtras.lua): in the route with numbers between
+# their neighbours', so adding them changes no one's saved numbers or the signature
+L, W, ns = fresh(race="Orc", raceId=2, level=12)
+lst = ns._dbg.list()
+idx = {(lst[k].t, lst[k].q): k for k in range(len(lst), 0, -1) if lst[k].q}
+k447 = idx.get(("A", 447))
+check("an added step is in the route", k447 is not None)
+check("...right after the step it's anchored to", k447 and (lst[k447 - 1].t, lst[k447 - 1].q) == ("A", 437),
+      k447 and (lst[k447 - 1].t, lst[k447 - 1].q))
+check("...numbered between its neighbours", k447 and lst[k447 - 1].i < lst[k447].i < lst[k447 + 1].i and lst[k447].i % 1 != 0,
+      k447 and (lst[k447 - 1].i, lst[k447].i, lst[k447 + 1].i))
+check("...in its anchor's section", k447 and lst[k447].section == lst[k447 - 1].section)
+check("Undead-only added steps aren't on an orc's route", ("A", 99156) not in idx)
+st = ns._dbg.state()
+sig = st.routeSignature
+ns.GuidePick(k447)
+place = st.pos
+ns._dbg.reload()
+st = ns._dbg.state()
+s, j, _ = ns.GuideCurrent()
+check("a place on an added step survives a reload", st.pos == place and s.q == 447, (st.pos, place, s.q))
+L.execute("HARNESS_NS.HordeGuideExtras = {}")
+before = len(list(ns.printed.values()))
+ns._dbg.reload()
+st = ns._dbg.state()
+check("taking the added steps away doesn't change the route's signature", st.routeSignature == sig, (st.routeSignature, sig))
+check("...or reset anyone's progress", not any("route has changed" in str(m) for m in list(ns.printed.values())[before:]))
+
 # 9. walk the route: do whatever the guide shows, see that it never gets stuck
 
 
@@ -513,6 +542,7 @@ def walk(race, rid, cls="WARRIOR", cid=1, limit=12000):
     lst = ns._dbg.list()
     total = len(lst)
     last, stuck, did, worst = None, 0, {"A": 0, "T": 0, "C": 0, "other": 0}, None
+    handed = set()
     seen_sections = []
     t0 = time.time()
     for n in range(limit):
@@ -524,7 +554,7 @@ def walk(race, rid, cls="WARRIOR", cid=1, limit=12000):
         if j == last:
             stuck += 1
             if stuck > 4:
-                return False, f"stuck at {j}/{total}: {(s.t, s.q, s.name or s.text, s.section)}", did, seen_sections, n
+                return False, f"stuck at {j}/{total}: {(s.t, s.q, s.name or s.text, s.section)}", did, seen_sections, n, handed
         else:
             stuck = 0
         last = j
@@ -545,6 +575,7 @@ def walk(race, rid, cls="WARRIOR", cid=1, limit=12000):
             if W.log[q] is None and not W.completed[q]:
                 accept(W, q)  # (a pick-up the guide let you pass by - you'd have it from earlier)
             turnin(W, q)
+            handed.add(q)
             W.level = min(60, max(W.level, QL.get(q, 1)))
             did["T"] += 1
         else:
@@ -556,16 +587,20 @@ def walk(race, rid, cls="WARRIOR", cid=1, limit=12000):
         s2, j2, _ = ns.GuideCurrent()
         if j2 == total and (s2.t not in ("A", "C", "T")):
             break
-    return True, f"{time.time() - t0:.1f}s", did, seen_sections, n
+    return True, f"{time.time() - t0:.1f}s", did, seen_sections, n, handed
 
 
 for race, rid, cls, cid in (("Tauren", 6, "WARRIOR", 1), ("Orc", 2, "HUNTER", 3), ("Troll", 8, "SHAMAN", 7),
                             ("Scourge", 5, "MAGE", 8), ("Skyborne", 96, "DRUID", 11)):
-    ok, info, did, secs, n = walk(race, rid, cls, cid)
+    ok, info, did, secs, n, handed = walk(race, rid, cls, cid)
     print(f"   {race} {cls}: {info}, {n} actions, did {did}")
     print(f"   zones: {' > '.join(s.split(' (')[0] for s in secs[:12])} ...")
     check(f"{race} {cls}: the route plays through without the guide getting stuck", ok, info)
     check(f"{race} {cls}: most of the route's hand-ins get done", did["T"] > 600, did)
+    # Hearthbound's own steps (GuideExtras.lua): the chains Ruins of Lordaeron's quests need
+    check(f"{race} {cls}: A Recipe For Death, all three parts", {447, 450, 451} <= handed, {447, 450, 451} - handed)
+    check(f"{race} {cls}: Rear Guard Patrol part 2 only on the Undead's route", (99156 in handed) == (race == "Scourge"),
+          99156 in handed)
 
 print()
 print("FAILED:" if fails else "ALL PASSED", fails)

@@ -20,7 +20,8 @@ local ADDON_NAME, ns = ...
 --                  "Not confirmed yet" where those don't say
 --
 -- Entry fields: key, name, min, max, zone (where it is), faction ("A"/"H"/nil),
--- new, entrance { zone, x, y, approx, note }, bosses { names },
+-- new, entrance { zone, x, y, approx, note }, bosses { names }, guideLevel (the level the
+-- levelling guide runs it at, when that isn't what its level range says),
 -- quests { { title, giver, place, faction, level, zone, x, y, inside, reward } },
 -- questIds { QuestieDB quest IDs that belong to the dungeon but aren't filed under it },
 -- loot { { boss, items = { itemID, ... } } }, classicQuests (true = Classic data)
@@ -55,6 +56,7 @@ ns.DUNGEONS = {
     },
     {
         key = "lordaeron", name = "Ruins of Lordaeron", min = 15, max = 20, zone = "Tirisfal Glades", new = true,
+        guideLevel = 21, -- the route is next by Tirisfal at 21-22 (its quests are 21-22)
         entrance = { zone = "Tirisfal Glades", x = 71.6, y = 11.4, approx = true, note = "Player-reported position" },
         bosses = { "Witherfang", "The Abandoned", "The Butcher", "Rath'mael", "Lordaeron Captain", "Viktor the Vile",
                    "Bjork", "The Baron" },
