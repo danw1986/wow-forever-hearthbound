@@ -335,7 +335,14 @@ J.eval("""function(ns)
     ns.QuestieDungeonQuestIds = function(key) if key == "wc" then return { 1486, 1490, 6981, 7000 } end return {} end
     ns.QuestieQuestInfo = function(id) local q = Q[id] if q then q.id = id end return q end
     ns.QuestieFitsYou = function(id) return id ~= 7000 end
-    ns.QuestieQuestName = function(id) return id == 1489 and "Hamuul Runetotem" or nil end
+    ns.QuestieQuestName = function(id)
+        return (id == 1489 and "Hamuul Runetotem") or (id == 1488 and "Hamuul's Errand") or nil
+    end
+    -- the quest before is the end of a chain: its first part, and who gives it
+    ns.QuestieChainStart = function(id) return id == 1490 and 1488 or nil end
+    ns.QuestieGiverById = function(id)
+        if id == 1488 then return { giver = "Arch Druid Hamuul", mapID = 1456, x = 78.6, y = 28.6 } end
+    end
     ns.QuestDone = function() return false end
     ns.ClearJournalQuestCache()
 end""")(jns)
@@ -402,6 +409,22 @@ ok, err, text = page(jns)
 check("the dungeon page opens", ok, err)
 check("...saying whether the levelling guide runs it", "Levelling guide:" in text, text[:400])
 check("...and listing what to pick up, with its giver", "Deviate Hides" in text and "Nalpak" in text)
+# its Quests tab: each quest in full
+qtext = J.eval("""function(ns)
+    for _, item in ipairs(ns.JournalMenu()) do
+        if item.label == "Quests" and item.onClick then item.onClick() end
+    end
+    MOCK.RunTimers()
+    local texts = {}
+    for _, o in ipairs(MOCK.frames) do
+        if o:IsVisible() ~= false and type(o._text) == "string" then texts[#texts + 1] = o._text end
+    end
+    return table.concat(texts, " | ")
+end""")(jns)
+text = qtext
+check("...a quest with something to do first says so", "Do first: Hamuul Runetotem" in text, text[:600])
+check("...and where the chain starts, when it's longer", "Start with Hamuul's Errand, from Arch Druid Hamuul" in text and "78.6, 28.6" in text,
+      text[text.find("Do first"):text.find("Do first") + 200])
 errs = [str(e)[:200] for e in list(J.globals().MOCK.errors.values())]
 check("...with no errors", not errs, errs[:3])
 
