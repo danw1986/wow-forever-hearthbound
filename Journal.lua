@@ -944,6 +944,15 @@ local function QuestSpec(q, dungeonKey)
     end
     if #needs > 0 and not status then
         lines[#lines + 1] = "|cffff8844Do first: " .. table.concat(needs, ", ") .. "|r"
+        -- the quest before can be the end of a chain: where the part you can take now is
+        local startId = q.id and ns.QuestieChainStart and ns.QuestieChainStart(q.id)
+        local g = startId and ns.QuestieGiverById and ns.QuestieGiverById(startId)
+        if g and g.giver then
+            local where = g.mapID and (Safe(C_Map.GetMapInfo, g.mapID) or {}).name
+            local title = ns.QuestieQuestName and ns.QuestieQuestName(startId) or "it"
+            lines[#lines + 1] = format("|cffff8844  Start with %s, from %s%s|r", title, g.giver,
+                where and format(" - %s %.1f, %.1f", where, g.x or 0, g.y or 0) or "")
+        end
     end
     if q.reward then lines[#lines + 1] = "|cff999999Reward: " .. q.reward .. "|r" end
     local finish = ns.QuestieFinish and ns.QuestieFinish(q.title, q.id)
