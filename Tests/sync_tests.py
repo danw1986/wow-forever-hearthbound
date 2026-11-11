@@ -30,6 +30,7 @@ class Player:
         ns.db.guideEdition = "horde"
         ns.version = "0.9.6"
         W.load(ADDON + "GuideData.lua")
+        W.load(ADDON + "GuideExtras.lua")
         W.load(ADDON + "Guide.lua")
         for fn in ns.inits.values():
             fn()
