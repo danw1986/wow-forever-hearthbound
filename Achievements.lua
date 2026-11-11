@@ -85,6 +85,14 @@ local ICON = {
     dance = "Interface\\Icons\\Spell_Shadow_DeathScream",
     drunk = "Interface\\Icons\\INV_Drink_04",
     afk = "Interface\\Icons\\Spell_Nature_TimeStop",
+    bop = "Interface\\Icons\\Spell_Holy_SealOfProtection",
+    innervate = "Interface\\Icons\\Spell_Nature_Lightning",
+    brains = "Interface\\Icons\\Spell_Holy_MagicalSentry",
+    levitate = "Interface\\Icons\\Spell_Holy_LayOnHands",
+    fear = "Interface\\Icons\\Spell_Shadow_PsychicScream",
+    bail = "Interface\\Icons\\Ability_Vanish",
+    rude = "Interface\\Icons\\Ability_Rogue_Disguise",
+    duel = "Interface\\Icons\\Ability_DualWield",
 }
 
 ---------------------------------------------------------------------------
@@ -272,6 +280,9 @@ local function Snapshot()
     c.dances = ns.cdb.dances or 0
     c.drunk = ns.cdb.achDrunk or false
     c.afk = ns.cdb.achAFK or false
+    -- mischief (Mischief.lua): how often, and who it was done to last
+    c.mischief = ns.cdb.mischief or {}
+    c.victims = ns.cdb.mischiefVictims or {}
 
     -- slayer
     c.byType = ns.cdb.killsByType or {}
@@ -308,6 +319,7 @@ local CATEGORIES = {
     { key = "survival", label = "Survival" },
     { key = "gold", label = "Gold" },
     { key = "fun", label = "Fun" },
+    { key = "mischief", label = "Mischief" },
     { key = "warrior", label = "Warrior", class = "WARRIOR" },
     { key = "paladin", label = "Paladin", class = "PALADIN" },
     { key = "hunter", label = "Hunter", class = "HUNTER" },
@@ -573,6 +585,47 @@ local function Define()
         prefix = "ach:afk:", steps = { 1 }, hidden = { true }, tiers = { "bronze" },
         value = function(c) return c.afk and 1 or 0 end, label = function() return "AFK legend" end, fmt = Yes })
 
+    -- Mischief: "helping" your party and guildmates (Mischief.lua counts it). The
+    -- class ones only show for that class; victimText names who it was done to.
+    local function Times(one, many)
+        return function(n) return n == 1 and one or format(many, n) end
+    end
+    Group("mischief", { title = "Hands off!", desc = "Cast Blessing of Protection on a party member, whether they wanted it or not.",
+        icon = ICON.bop, classes = { PALADIN = true }, prefix = "ach:mis:bop:", steps = { 1, 10, 25 },
+        value = function(c) return c.mischief.bop or 0 end, label = Times("Hands off!", "%d unwanted blessings"),
+        victim = "bop", victimText = "Blessing of Protection on %s. No hitting things for them." })
+    Group("mischief", { title = "Tank-proofed", desc = "Blessing of Protection on a warrior in the middle of a fight.",
+        icon = ICON.bop, classes = { PALADIN = true }, prefix = "ach:mis:boptank:", steps = { 1 }, hidden = { true },
+        tiers = { "gold" }, value = function(c) return c.mischief.bopTank or 0 end, label = function() return "Tank-proofed" end,
+        fmt = Yes, victim = "bopTank", victimText = "Blessing of Protection on %s, mid-fight. Good luck holding aggro now." })
+    Group("mischief", { title = "Wasted on you", desc = "Innervate a warrior or a rogue. They don't have mana.",
+        icon = ICON.innervate, classes = { DRUID = true }, prefix = "ach:mis:innervate:", steps = { 1 }, tiers = { "silver" },
+        value = function(c) return c.mischief.innervate or 0 end, label = function() return "Wasted on you" end, fmt = Yes,
+        victim = "innervate", victimText = "Innervate on %s, who has no mana to speak of." })
+    Group("mischief", { title = "Brains for brawn", desc = "Arcane Intellect on a warrior or a rogue.",
+        icon = ICON.brains, classes = { MAGE = true }, prefix = "ach:mis:brains:", steps = { 1, 10 }, tiers = { "bronze", "silver" },
+        value = function(c) return c.mischief.brains or 0 end, label = Times("Brains for brawn", "%d wasted intellects"),
+        victim = "brains", victimText = "Arcane Intellect on %s. Every little helps?" })
+    Group("mischief", { title = "Up, up and away", desc = "Levitate a party member.",
+        icon = ICON.levitate, classes = { PRIEST = true }, prefix = "ach:mis:levitate:", steps = { 1, 10 }, tiers = { "bronze", "silver" },
+        value = function(c) return c.mischief.levitate or 0 end, label = Times("Up, up and away", "%d party members afloat"),
+        victim = "levitate", victimText = "%s is floating now. You're welcome." })
+    Group("mischief", { title = "Scattered", desc = "Fear the pull in a dungeon with your party. The next pack says hello.",
+        icon = ICON.fear, classes = { WARRIOR = true, PRIEST = true, WARLOCK = true }, prefix = "ach:mis:fear:", steps = { 1, 10 },
+        tiers = { "bronze", "silver" }, value = function(c) return c.mischief.fear or 0 end,
+        label = Times("Scattered", "%d dungeon fears") })
+    Group("mischief", { title = "Every one for themselves", desc = "Feign Death or Vanish while your party is still fighting.",
+        icon = ICON.bail, classes = { HUNTER = true, ROGUE = true }, prefix = "ach:mis:bail:", steps = { 1, 10 },
+        tiers = { "bronze", "silver" }, value = function(c) return c.mischief.bail or 0 end,
+        label = Times("Every one for themselves", "Left the party %d times") })
+    Group("mischief", { title = "Bad manners", desc = "/slap, /rude, /spit, /chicken or /fart at a guildmate or party member.",
+        icon = ICON.rude, prefix = "ach:mis:rude:", steps = { 1, 10, 50 }, value = function(c) return c.mischief.rude or 0 end,
+        label = Times("Bad manners", "%d rude emotes"), victim = "rude", victimText = "Aimed at %s, of all people." })
+    Group("mischief", { title = "Family feud", desc = "Beat a guildmate or party member in a duel.",
+        icon = ICON.duel, prefix = "ach:mis:duel:", steps = { 1, 5 }, tiers = { "silver", "gold" },
+        value = function(c) return c.mischief.duel or 0 end, label = Times("Family feud", "%d duels won at home"),
+        victim = "duel", victimText = "You beat %s in a duel. Awkward." })
+
     -- Warrior
     Group("warrior", { title = "Stance master", desc = "Learn Defensive and Berserker Stance.", icon = ICON.stance,
         prefix = "ach:stances:", steps = { 1 }, tiers = { "silver" },
@@ -603,6 +656,13 @@ local function Applies(cat)
     return true
 end
 
+-- a group just for some classes (the Mischief ones): is it one of yours?
+local function GroupForMe(g)
+    if not g.classes then return true end
+    local _, class = UnitClass("player")
+    return g.classes[class] == true
+end
+
 local function Met(item, c)
     local v = item.value(c)
     if item.lowerBetter then return v ~= nil and v <= item.target end
@@ -626,6 +686,10 @@ local function CategoryOf(item)
     end
 end
 
+local function ForMe(item)
+    return GroupForMe(item.group) and Applies(CategoryOf(item))
+end
+
 ---------------------------------------------------------------------------
 -- Unlocking
 ---------------------------------------------------------------------------
@@ -638,10 +702,11 @@ local function Check()
     local catchUp = (ns.cdb.achVersion or 0) < VERSION
     local quietly = 0
     for _, item in ipairs(allItems) do
-        local cat = CategoryOf(item)
-        if not Done(item) and Applies(cat) and not (item.missed and item.missed(c)) and Met(item, c) then
+        if not Done(item) and ForMe(item) and not (item.missed and item.missed(c)) and Met(item, c) then
             local title = item.hidden and item.group.title or item.label
             local text = item.group.desc or item.group.title
+            local victim = item.group.victim and c.victims[item.group.victim]
+            if victim and item.group.victimText then text = format(item.group.victimText, victim) end
             if item.key:find("^ach:nemesis") and c.nemesisName then text = format("%s has killed you %d times.", c.nemesisName, c.nemesis) end
             if item.key:find("^ach:firstdeath") then text = FIRST_DEATH_BANTER[math.random(#FIRST_DEATH_BANTER)] end
             ns.Milestone(item.key, title, text, item.icon, catchUp, { tier = item.tier, points = item.points })
@@ -777,7 +842,7 @@ local function Totals(c)
     local byCat = {}
     for _, item in ipairs(allItems) do
         local cat = CategoryOf(item)
-        if Applies(cat) then
+        if ForMe(item) then
             total = total + 1
             maxPoints = maxPoints + item.points
             byCat[cat] = byCat[cat] or { done = 0, total = 0 }
@@ -807,8 +872,7 @@ local function BuildOverview(c)
     add.header("Closest to unlocking")
     local list = {}
     for _, item in ipairs(allItems) do
-        local cat = CategoryOf(item)
-        if Applies(cat) and not Done(item) and not item.hidden and not (item.missed and item.missed(c)) then
+        if ForMe(item) and not Done(item) and not item.hidden and not (item.missed and item.missed(c)) then
             list[#list + 1] = { item = item, f = Fraction(item, c) }
         end
     end
@@ -873,7 +937,10 @@ end
 
 local function BuildCategory(cat, c)
     if cat == "slayer" then return BuildSlayer(c) end
-    local list = groups[cat] or {}
+    local list = {}
+    for _, g in ipairs(groups[cat] or {}) do
+        if GroupForMe(g) then list[#list + 1] = g end
+    end
     -- share the groups between the columns by size
     local leftSize, rightSize = 0, 0
     for _, g in ipairs(list) do
@@ -961,9 +1028,11 @@ end
 local function Earned(cat)
     local got, total = 0, 0
     for _, g in ipairs(cat and groups[cat] or {}) do
-        for _, item in ipairs(g.items) do
-            total = total + 1
-            if Done(item) then got = got + 1 end
+        if GroupForMe(g) then
+            for _, item in ipairs(g.items) do
+                total = total + 1
+                if Done(item) then got = got + 1 end
+            end
         end
     end
     return got, total
@@ -996,10 +1065,17 @@ end
 function ns.AchievementsSummary()
     local got, total = 0, 0
     for _, item in ipairs(allItems) do
-        total = total + 1
-        if Done(item) then got = got + 1 end
+        if ForMe(item) then
+            total = total + 1
+            if Done(item) then got = got + 1 end
+        end
     end
     return format("%d of %d earned  |cff777777-|r  milestones for levelling, questing, dungeons and more", got, total)
+end
+
+-- something just happened that may unlock one (a bit of mischief): check in a moment
+function ns.AchievementsCheckSoon()
+    C_Timer.After(1, function() pcall(Check) end)
 end
 
 table.insert(ns.inits, function()

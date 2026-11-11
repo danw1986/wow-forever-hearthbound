@@ -50,6 +50,7 @@ Deaths.lua
 Kills.lua
 Cards.lua
 Tracking.lua
+Mischief.lua
 Alts.lua
 Bags.lua
 QuestItems.lua
