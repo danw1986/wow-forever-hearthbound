@@ -991,8 +991,20 @@ local function BuildQuestList(d)
     local learned = Journal().quests[d.key] or {}
     local list, seen = {}, {}
     local fromQuestie = ns.QuestieDungeonQuestIds and ns.QuestieDungeonQuestIds(d.key)
+    -- and the dungeon's quests Questie files elsewhere (no zone, or a city): d.questIds
+    local ids, idSeen = {}, {}
+    if fromQuestie then
+        for _, list in ipairs({ fromQuestie, d.questIds or {} }) do
+            for _, id in ipairs(list) do
+                if not idSeen[id] then
+                    idSeen[id] = true
+                    ids[#ids + 1] = id
+                end
+            end
+        end
+    end
     local byTitle = {}
-    for _, id in ipairs(fromQuestie or {}) do
+    for _, id in ipairs(ids) do
         local fits = not ns.QuestieFitsYou or ns.QuestieFitsYou(id) ~= false
         local q = fits and QuestieEntry(id)
         local key = q and q.title:lower()
@@ -1005,10 +1017,22 @@ local function BuildQuestList(d)
     end
     for _, q in ipairs(d.quests or {}) do
         local same = byTitle[q.title:lower()]
-        if same then
-            -- what only the published list says: the reward, a note on where
+        -- (the other side's version of a quest can have another giver: only yours)
+        if same and (not q.faction or not mine or q.faction == mine) then
+            -- what only the published list says: the reward, and who and where when
+            -- Questie has no position for the giver
             same.reward = same.reward or q.reward
-            if q.place and not same.mapID then same.place = q.place end
+            if not same.mapID then
+                if q.zone and q.x then
+                    -- the published list has the spot (Questie knows the giver at most)
+                    same.giver, same.place = q.giver or same.giver, q.place or same.place
+                    same.zone, same.x, same.y, same.inside = q.zone, q.x, q.y, nil
+                elseif not same.giver then
+                    same.giver, same.place, same.inside = q.giver, q.place or same.place, q.inside
+                elseif q.place then
+                    same.place = q.place
+                end
+            end
             seen[q.title] = true
         end
     end

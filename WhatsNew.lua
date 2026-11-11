@@ -10,6 +10,10 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.9.8", items = {
+        { "Quests for every new dungeon",
+          "The dungeon journal now lists the quests for The Drowned City, Krol'dok Stronghold, Alcaz Island Prison and Blackmaw Hold, and the missing ones for Excavation Site and Dalaran: who gives each one, where, and the rewards. A few givers aren't known yet and say so." },
+    } },
     { version = "0.9.7", items = {
         { "Achievements in party and guild chat",
           "Each achievement you unlock can go to party chat while you're grouped, and to guild chat. Turn either one on or off in Pop-ups & extras.",

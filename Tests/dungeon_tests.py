@@ -351,6 +351,42 @@ shard = by.get("The Glowing Shard")
 check("...and that one starts from an item inside", shard is not None and shard.inside and "Glowing Shard" in shard.giver)
 nara = by.get("Nara Wildmane")
 check("...and what has to come first", nara is not None and nara.pre is not None and nara.pre[1] == 1489)
+# a new dungeon whose quests QuestieDB doesn't file under it (no zone): the
+# dungeon lists their IDs, and the published list fills in who and where
+J.eval("""function(ns)
+    local Q = {
+        [94968] = { title = "Eye of Mugg", level = 45, start = { giver = "Krom'rosh", mapID = 2000, x = 59.4, y = 45.5 },
+                    preSingle = {}, preGroup = {} },
+        [94982] = { title = "Eye of Mugg", level = 45, preSingle = {}, preGroup = {} },             -- the Alliance's
+        [94975] = { title = "A Token of Vengeance", level = 42, start = { giver = "Da'grosh" },     -- no spawn known
+                    preSingle = {}, preGroup = {} },
+        [94983] = { title = "Twilight Mementos", level = 42, preSingle = {}, preGroup = {} },       -- Alliance only
+    }
+    local old = ns.QuestieQuestInfo
+    ns.QuestieQuestInfo = function(id) local q = Q[id] if q then q.id = id return q end return old(id) end
+    ns.QuestieFitsYou = function(id) return id ~= 7000 and id ~= 94982 and id ~= 94983 end
+    ns.ClearJournalQuestCache()
+end""")(jns)
+kq = jns.DungeonQuestList("kroldok")[0]
+kby = {}
+for k in range(1, len(kq) + 1):
+    kby.setdefault(kq[k].title, []).append(kq[k])
+mugg = kby.get("Eye of Mugg", [])
+check("a new dungeon's quests with no zone are listed (from its quest IDs)", len(mugg) == 1 and mugg[0].questieId == 94968,
+      list(kby))
+check("...with QuestieDB's giver, not the other side's", mugg and mugg[0].giver == "Krom'rosh" and mugg[0].mapID == 2000,
+      mugg and (mugg[0].giver, mugg[0].mapID))
+check("...and the published reward", mugg and "Rock on Stick" in (mugg[0].reward or ""), mugg and mugg[0].reward)
+token = kby.get("A Token of Vengeance", [None])[0]
+check("a giver QuestieDB can't place gets the published place, not 'inside'",
+      token is not None and token.giver == "Da'grosh" and not token.inside and token.zone == "Riverglades" and token.x == 33.4,
+      token and (token.giver, token.inside, token.zone, token.x))
+check("the other side's quests aren't listed", "Twilight Mementos" not in kby and "Ashe Amberhall" not in
+      [q.giver for qs in kby.values() for q in qs], list(kby))
+check("...and published ones QuestieDB hasn't got are", "Krol'dok Moulding" in kby and "Key Ingredients" in kby, list(kby))
+keys = kby.get("Key Ingredients", [])
+check("...for your side only", len(keys) == 1 and keys[0].giver == "Kreza Darkthorn", [(q.giver) for q in keys])
+
 # the dungeon's page draws, with the guide line and the quests to pick up
 J.globals().UnitLevel = J.eval("function() return 18 end")
 page = J.eval("""function(ns)
