@@ -74,6 +74,9 @@ tools into one window, and keeps a record of each character's journey to 60.
 - Journey tab: road to 60, milestones reached, deaths and level history
 - Stats tab: session summary, XP sources, best mobs, kills by creature type
 - Achievements, milestone pop-ups and level-up screenshots
+- Achievements can be posted to party and guild chat (each switch on its own), and
+  Mischief achievements reward "helping" your party and guild: Blessing of Protection on
+  someone who wanted to fight, Innervate on a warrior, rude emotes, duels won at home...
 - Enemy card collection: each different enemy you kill adds its card
 - Alts tab with an account-wide snapshot of every character and total gold
 

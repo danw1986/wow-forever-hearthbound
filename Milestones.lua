@@ -110,24 +110,63 @@ end
 ---------------------------------------------------------------------------
 -- key makes each milestone happen once; silent records it without a pop-up
 ---------------------------------------------------------------------------
--- Guild broadcast (optional): "[Hearthbound] Level 30! 30 levels to go."
+-- Posting to party and guild chat (each optional):
+-- "[Hearthbound] Level 30! 30 levels to go."
+-- "[Hearthbound] Achievement: Hands off! (+10) - Blessing of Protection on Grok..."
 ---------------------------------------------------------------------------
-local guildQueue = {}
+local chatQueue = {} -- { msg, channel }, sent one at a time
+local CHAT_GAP = 1.5 -- seconds between posts, so a burst of unlocks doesn't flood chat
+local chatBusy = false
 
-local function SendToGuild(msg)
+local function SendNext()
+    local entry = chatQueue[1]
+    if not entry then
+        chatBusy = false
+        return
+    end
+    -- addon chat is touchier in combat on this client, so wait it out (PLAYER_REGEN_ENABLED)
+    if InCombatLockdown() then
+        chatBusy = false
+        return
+    end
+    table.remove(chatQueue, 1)
     local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
-    if send then pcall(send, msg, "GUILD") end
+    if send then pcall(send, entry[1], entry[2]) end
+    chatBusy = true
+    C_Timer.After(CHAT_GAP, SendNext)
 end
 
-local function BroadcastToGuild(title, text)
-    if not ns.db.announceGuild or not IsInGuild() or not title then return end
-    local msg = "[Hearthbound] " .. title .. (text and text ~= "" and (" " .. text) or "")
-    -- addon chat is touchier in combat on this client, so wait it out
-    if InCombatLockdown() then
-        guildQueue[#guildQueue + 1] = msg
+local function Post(msg, channel)
+    if #chatQueue >= 10 then return end -- something's gone wrong: don't pile up
+    chatQueue[#chatQueue + 1] = { msg, channel }
+    if not chatBusy then SendNext() end
+end
+
+-- the party's channel: your party (or raid group), else a dungeon finder group
+local function PartyChannel()
+    if not IsInGroup then return nil end
+    if IsInGroup(LE_PARTY_CATEGORY_HOME) then return "PARTY" end
+    if LE_PARTY_CATEGORY_INSTANCE and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then return "INSTANCE_CHAT" end
+end
+
+-- the line posted for a milestone or achievement (style: an achievement's tier and points)
+function ns.MilestoneChatLine(title, text, style)
+    local msg
+    if style then
+        msg = "[Hearthbound] Achievement: " .. title .. (style.points and format(" (+%d)", style.points) or "")
+        if text and text ~= "" then msg = msg .. " - " .. text end
     else
-        SendToGuild(msg)
+        msg = "[Hearthbound] " .. title .. (text and text ~= "" and (" " .. text) or "")
     end
+    return (msg:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):sub(1, 250))
+end
+
+local function Broadcast(title, text, style)
+    if not title then return end
+    local msg = ns.MilestoneChatLine(title, text, style)
+    local party = ns.db.achParty and PartyChannel()
+    if party then Post(msg, party) end
+    if ns.db.announceGuild and IsInGuild() then Post(msg, "GUILD") end
 end
 
 -- style (optional, achievements): { tier = "bronze"|"silver"|"gold", points = n }
@@ -145,7 +184,7 @@ function ns.Milestone(key, title, text, icon, silent, style)
         ns.ShowNextToast()
     end
     ns.Print("|cffffd200" .. title .. "|r " .. (text or ""))
-    BroadcastToGuild(title, text)
+    Broadcast(title, text, style)
 end
 
 -- Fires the highest step reached; lower ones are recorded silently
@@ -240,8 +279,10 @@ end
 
 table.insert(ns.inits, function()
     ns.On("PLAYER_REGEN_ENABLED", function()
-        for _, msg in ipairs(guildQueue) do SendToGuild(msg) end
-        wipe(guildQueue)
+        if not chatBusy and #chatQueue > 0 then
+            chatBusy = true
+            C_Timer.After(1, SendNext)
+        end
     end)
     ns.cdb.milestonesDone = ns.cdb.milestonesDone or {}
     ns.cdb.milestoneLog = ns.cdb.milestoneLog or {}

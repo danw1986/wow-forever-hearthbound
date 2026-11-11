@@ -10,6 +10,13 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.9.7", items = {
+        { "Achievements in party and guild chat",
+          "Each achievement you unlock can go to party chat while you're grouped, and to guild chat. Turn either one on or off in Pop-ups & extras.",
+          settings = "extras" },
+        { "Mischief achievements",
+          "A new category for \"helping\" your party and guildmates: Blessing of Protection on someone who wanted to fight, Innervate on a warrior, Levitate on a party member, fearing the pull in a dungeon, a quick Vanish, rude emotes and duels won against your own guild. The post names who it was done to." },
+    } },
     { version = "0.9.6", items = {
         { "Party guide sync",
           "Party members who have Hearthbound now see which guide step each other is on. The party leader gets a Sync button on the guide to bring everyone to the leader's step. Members are asked before their guide moves, or can choose to follow the leader without asking.",

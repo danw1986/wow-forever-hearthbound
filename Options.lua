@@ -580,8 +580,10 @@ local function BuildSettingsPage(page)
     col = In("extras")
     col:Header("Pop-ups & extras")
     col:Check("Milestone pop-ups", "toasts", "A banner and sound for level 10s, mount time, quest and kill counts and achievements.")
-    col:Check("Share milestones with guild", "announceGuild",
-        "Posts your milestones to guild chat when you're in a guild, e.g. \"[Hearthbound] Level 30! 30 levels to go.\"")
+    col:Check("Post achievements to party chat", "achParty",
+        "While you're in a group, each achievement and milestone you unlock goes to party chat, e.g. \"[Hearthbound] Achievement: Hands off! (+10) - Blessing of Protection on Grok. No hitting things for them.\"")
+    col:Check("Post achievements to guild chat", "announceGuild",
+        "Each achievement and milestone you unlock goes to guild chat when you're in a guild, e.g. \"[Hearthbound] Level 30! 30 levels to go.\"")
     col:Check("Level-up screenshots", "screenshots", "Takes a screenshot each time you level up - a picture diary of your journey.")
     col:Check("Minimap button", "showMinimap", "Left-click for settings, right-click for quests, hover for a summary.")
     col:Check("Welcome back window", "welcomeBack", "On login: time away, rested XP gained, your last session and your alts.")
