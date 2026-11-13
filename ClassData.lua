@@ -1,6 +1,6 @@
 -- Each class's specs and stat weights, class quest chains and talent plans.
 -- Rebuilt by Tests/class_import.py.
--- Adapted from github.com/fitzforge/polestar v0.3.5, GPL-3.0-only.
+-- Adapted from github.com/fitzforge/polestar v0.3.7.2, GPL-3.0-only.
 -- weights: per spec, one point of the main stat is about 1 (dps = melee weapon DPS, rdps = ranged).
 -- quests: min/max = levels; ends = the hand-ins that finish it (the first that fits your race);
 -- spells = what it teaches, also a sign it's done; gear = it pays gear too, so finish it anyway.
@@ -18,8 +18,8 @@ ns.CLASS_DATA = {
     quests = {
       {id="haggards-weapons", title="Defensive Stance and a Weapon", min=10, max=11, why="Defensive Stance at 10 and a one-hand weapon of your choice from Stormwind, Ironforge or Darnassus.", faction="Alliance", spells={71}, gear=true, ends={{q=1667}, {q=1693, races={"nightelf"}}, {q=1682, races={"dwarf", "gnome"}}, {q=94003, races={"skyborne"}}}},
       {id="heirloom-weapon", title="Defensive Stance and a Weapon", min=10, max=11, why="Defensive Stance at 10 and a one-hand weapon of your choice: Uzzek's road, Brill's crypt, or the Skybreaker shield.", faction="Horde", spells={71}, gear=true, ends={{q=1822}, {q=1503, races={"orc", "troll", "tauren", "skyborne"}}, {q=94003, races={"skyborne"}}}},
-      {id="fire-hardened-armor", title="Fire Hardened Armor", min=20, max=30, why="A hauberk at 28, a coif, leggings and gauntlets from three smiths, and a shield on the way.", faction="Alliance", ends={{q=1709, races={"dwarf", "gnome"}}, {q=1711, races={"nightelf"}}, {q=1706, races={"human", "skyborne"}}, {q=1700, races={"human"}}, {q=1782}}},
-      {id="brutal-armor", title="Brutal Armor", min=20, max=32, why="Four armor pieces at 30 (hauberk, helm, gauntlets, legguards) and a shield on the way.", faction="Horde", ends={{q=1847}}},
+      {id="fire-hardened-armor", title="Fire Hardened Armor", min=20, max=30, why="Starts now at 20 with a shield; a hauberk at 28, then a coif, leggings and gauntlets from three smiths.", faction="Alliance", ends={{q=1709, races={"dwarf", "gnome"}}, {q=1711, races={"nightelf"}}, {q=1706, races={"human", "skyborne"}}, {q=1700, races={"human"}}, {q=1782}}},
+      {id="brutal-armor", title="Brutal Armor", min=20, max=32, why="Starts now at 20 at your trainer; four armor pieces at 30 (hauberk, helm, gauntlets, legguards), a shield on the way.", faction="Horde", ends={{q=1847}}},
       {id="whirlwind-weapon", title="Whirlwind Weapon", min=30, max=40, why="Berserker Stance at 30 and a Whirlwind axe, sword or warhammer at 40.", spells={2458}, gear=true, ends={{q=1792}}},
       {id="voodoo-feathers", title="Voodoo Feathers", min=50, max=52, why="Experience at 50, ending in the Sunken Temple; Classic's item choice may be gone on Forever.", ends={{q=8425}}},
       {id="quelserrar", title="Quel'Serrar", min=60, max=60, why="A tank sword at 60: a Dire Maul book, then Onyxia's breath tempers the blade (the sword is not in Forever's items yet).", ends={{q=7509}}},
@@ -199,7 +199,7 @@ ns.CLASS_DATA = {
       {id="tome-of-divinity", title="Redemption", min=12, max=14, why="Redemption at 12, the paladin's resurrection: an easy chain through your capital and its home zone.", faction="Alliance", races={"human", "dwarf"}, spells={7328}, ends={{q=1785, races={"dwarf"}}, {q=1788, races={"human"}}}},
       {id="lumina-windsinger", title="Moonsilver Blade and Wolfsbane (Forsaken)", min=18, max=26, why="The Forsaken paladin's two-handed sword: rescue Lumina Windsinger, gather three parts, slay Old Fire-Eye.", faction="Horde", races={"scourge"}, ends={{q=95140}}},
       {id="verigans-fist", title="Verigan's Fist", min=20, max=30, why="The Alliance paladin's rare two-handed mace for the 20s, with a shield and Sense Undead on the way.", faction="Alliance", races={"human", "dwarf"}, spells={5502}, gear=true, ends={{q=1806}, {q=1793, races={"human"}}, {q=1794, races={"dwarf"}}}},
-      {id="cloak-of-the-divine-storm", title="Cloak of the Divine Storm", min=22, max=30, why="A rare cloak at 30 from the old Divine Storm story; for now only Alliance paladins can finish it.", faction="Alliance", ends={{q=78093}}},
+      {id="cloak-of-the-divine-storm", title="Cloak of the Divine Storm", min=22, max=30, why="Starts now at 22 at the Tower of Althalaxx; its mobs are 28-30, so go nearer 30 or with a friend. Alliance only for now.", faction="Alliance", ends={{q=78093}}},
       {id="holy-mightstone", title="Holy Mightstone", min=50, max=56, why="A one-use stone that makes you much stronger against undead for 10 minutes; the old item choice may be gone in Forever.", faction="Alliance", races={"human", "dwarf"}, ends={{q=8418}}},
     },
     builds = {
@@ -1104,7 +1104,7 @@ ns.CLASS_DATA = {
       {id="astral-knot-garment", title="Astral Knot Garment", min=26, max=30, why="A robe or a blouse for Alliance mages in their late 20s.", faction="Alliance", ends={{q=1942}, {q=1939, races={"human", "gnome"}}}},
       {id="nether-lace-garment", title="Nether-lace Garment", min=26, max=30, why="A robe or a tunic for Horde mages in their late 20s.", faction="Horde", races={"orc", "scourge", "troll"}, ends={{q=1946}}},
       {id="mages-wand", title="Mage's Wand", min=30, max=40, why="A wand of your school for the 30s: frost, arcane or fire.", ends={{q=1952}}},
-      {id="celestial-orb", title="Celestial Orb and Stave", min=35, max=40, why="An off-hand orb or a staff for the late 30s, your pick.", ends={{q=1958}}},
+      {id="celestial-orb", title="Celestial Orb and Stave", min=35, max=40, why="An off-hand orb or a staff for the late 30s, your pick.", ends={{q=2846}}},
       {id="destroy-morphaz", title="Destroy Morphaz", min=50, max=54, why="Experience at 50 through Azshara and the Sunken Temple; Classic's item choice may be gone on Forever.", ends={{q=8253}}},
       {id="atiesh", title="Atiesh, Greatstaff of the Guardian", min=60, max=60, why="The legendary staff of the Guardian: forty splinters from Naxxramas, two raid bosses and a demon in Stratholme.", ends={{q=9269}}},
       {id="arcane-refreshment", title="Conjure Water (Arcane Refreshment)", min=60, max=60, why="The level 60 Conjure Water, from a Dire Maul library: drink for you and your group.", spells={10140}, ends={{q=7463}}},
@@ -1291,7 +1291,7 @@ ns.CLASS_DATA = {
       {id="dread-mage-hat", title="Dread Mage Hat", min=25, max=30, why="A cloth hat in your late 20s: Zardeth's errand for any Alliance player pays warlocks this extra.", faction="Alliance", races={"human", "gnome"}, ends={{q=397}}},
       {id="felhunter", title="Felhunter", min=30, max=33, why="The felhunter, the demon to bring against spellcasters, and a Box of Souls for your shards.", faction="Alliance", spells={691}, gear=true, ends={{q=1795}}},
       {id="felhunter", title="Felhunter", min=30, max=33, why="The felhunter, the demon to bring against spellcasters, and a Box of Souls for your shards.", faction="Horde", spells={691}, gear=true, ends={{q=1795}, {q=3001, races={"scourge"}}, {q=2996, races={"orc", "troll"}}}},
-      {id="enchanted-gold-bloodrobe", title="Enchanted Gold Bloodrobe", min=31, max=38, why="A rare cloth robe for your 30s, which Menara Voidrender makes from the parts you bring her.", ends={{q=4786}, {q=4739, races={"scourge"}}, {q=4737, races={"orc", "troll"}}, {q=4736, races={"gnome"}}, {q=4738, races={"human"}}}},
+      {id="enchanted-gold-bloodrobe", title="Enchanted Gold Bloodrobe", min=31, max=38, why="A rare cloth robe for your 30s from Menara Voidrender; its last parts wait for levels 35 and 37.", ends={{q=4786}, {q=4739, races={"scourge"}}, {q=4737, races={"orc", "troll"}}, {q=4736, races={"gnome"}}, {q=4738, races={"human"}}}},
       {id="orb-of-orahil", title="Orb of Orahil", min=35, max=40, why="An off-hand orb or a staff for your late 30s, down the felhound's or the infernal's path, your pick.", ends={{q=4975}, {q=4969, races={"scourge"}}, {q=4967, races={"orc", "troll"}}, {q=4965, races={"gnome"}}, {q=4968, races={"human"}}}},
       {id="impsys-request", title="An Imp's Request", min=50, max=54, why="A staff, off-hand or robe for your 50s; Impsy's own errand, not a step of the Dreadsteed chain.", ends={{q=8422}}},
       {id="shard-of-the-green-flame", title="Shard of the Green Flame", min=50, max=56, why="A rare off-hand for your 50s from Niby and Impsy in Felwood, the camp that also offers An Imp's Request.", ends={{q=7603}}},

@@ -341,6 +341,21 @@ def when_fields(lines, guide_id):
             out["notBound"] = arg
         elif word == "!skill" and len(toks) > 2 and toks[2][1] == "1":
             out["noSkill"] = arg
+        elif word == "skill" and len(toks) > 2 and toks[2][1] == "1":
+            out["skill"] = arg  # only with this profession (Camping 101's profession quests)
+        elif word == "!knows" and arg.isdigit():
+            out["notKnown"] = int(arg)  # only while you don't know this spell or recipe
+        elif word in ("turnedin", "!turnedin", "!onquest", "available") and arg.isdigit():
+            key = {"turnedin": "turnedIn", "!turnedin": "notTurnedIn", "!onquest": "notOnQuest",
+                   "available": "available"}[word]
+            out.setdefault(key, []).append(int(arg))  # every one of them
+        elif word == "!complete" and arg.isdigit():
+            out["notReady"] = int(arg)  # the quest isn't ready to hand in (not in your log, or not done)
+        elif word == "has" and arg.isdigit():
+            count = re.fullmatch(r"x(\d+)", toks[2][1]) if len(toks) > 2 else None
+            out["hasAtLeast"] = [int(arg), int(count.group(1)) if count else 1]
+        elif word == "zone" and arg:
+            out["inZone"] = arg  # only while you're in that zone
         elif word == "complete" and arg.isdigit():
             out["ready"] = int(arg)  # the quest is in your log, ready to hand in
         elif word == "!has" and arg.isdigit():
@@ -370,7 +385,7 @@ def lua(v):
 
 
 FIELD_ORDER = ["t", "q", "obj", "name", "text", "gv", "gw", "optional", "group", "foreverOnly", "z", "x", "y", "target",
-               "note", "tip", "races", "classes", "lvlBelow", "lvlMin", "moneyMin", "noSkill", "bound", "notBound", "onQuest", "solo",
+               "note", "tip", "races", "classes", "lvlBelow", "lvlMin", "moneyMin", "noSkill", "skill", "notKnown", "turnedIn", "notTurnedIn", "notOnQuest", "notReady", "available", "hasAtLeast", "inZone", "direct", "bound", "notBound", "onQuest", "solo",
                "ready", "hasBelow", "section", "zoneName", "p", "place", "was"]
 PLACE_ID = [0]  # each upstream step: one place, its goals shown together
 
@@ -450,7 +465,7 @@ def convert(guide, place, out):
                 elif a == "only":
                     mods["only"].append(args[i + 1][1] if i + 1 < len(args) else "")
                     i += 1
-                elif a in ("optional", "live", "era", "nearest", "group", "until"):
+                elif a in ("optional", "live", "era", "nearest", "group", "until", "direct"):
                     mods[a] = True
                 elif re.fullmatch(r"x\d+", a):
                     mods["count"] = int(a[1:])
@@ -509,6 +524,8 @@ def convert(guide, place, out):
                 s, rec = quest_step(t, q)
                 if verb == "accept":
                     accepted.add(q)
+                if t == "T" and mods.get("direct"):
+                    s["direct"] = True  # handed in straight from the giver's window: never in your log
                 who = arr(rec.get("startedBy" if t == "A" else "finishedBy"))
                 npcs = [int(mods["npc"])] if mods.get("npc") else (who[0] if len(who) > 0 and who[0] else [])
                 objs = [int(mods["object"])] if mods.get("object") else (who[1] if len(who) > 1 and who[1] else [])
@@ -748,6 +765,30 @@ for n, s in enumerate(steps):
     inn_of[s["text"]] = s
     print(f"inn: {s['text']} -> {name_of('npc', int(best[1]))} ({z} {s['x']}, {s['y']}) {best[0]:.1f} from the stop")
 
+# ------------------------------------------------------------------ a pick-up just before the hand-in it needs
+# QuestieDB can know a prerequisite the upstream data doesn't (Rocks to Rests needs
+# Favorite Food, handed in a step later beside it): the pick-up moves to just after
+# that hand-in, when it's a few steps on at the same spot.
+def prerequisites(q):
+    r = Q.get(str(q)) or {}
+    return set((r.get("preQuestSingle") or []) + (r.get("preQuestGroup") or []))
+
+
+n = 0
+while n < len(steps):
+    s = steps[n]
+    if s["t"] == "A" and s.get("q") and "x" in s:
+        need = prerequisites(s["q"])
+        for m in range(n + 1, min(len(steps), n + 5)):
+            e = steps[m]
+            if (e["t"] == "T" and e.get("q") in need and "x" in e and e.get("z") == s.get("z")
+                    and math.hypot(e["x"] - s["x"], e["y"] - s["y"]) < 1.5 and e.get("races") in (None, s.get("races"))):
+                steps.insert(m, steps.pop(n))  # (e is at m - 1 now: s goes just after it)
+                print(f"order: {s['name']} ({s['q']}) after {e['name']} ({e['q']}), which it needs")
+                n -= 1
+                break
+    n += 1
+
 # ------------------------------------------------------------------ checks and output
 placed = sum(1 for s in steps if "x" in s)
 quest = [s for s in steps if s.get("q")]
@@ -825,9 +866,14 @@ if WRITE:
         fh.write("-- obj = N: the step is objective N of its quest; optional = true: never holds you up;\n")
         fh.write("-- place = the stop on the route the step belongs to.\n")
         fh.write("-- Only while it holds (checked as you play): lvlBelow/lvlMin = level, part-way levels too (16.51);\n")
-        fh.write("-- moneyMin = copper; noSkill = skill not learned; bound/notBound = hearthstone; onQuest = any in\n")
+        fh.write("-- moneyMin = copper; noSkill = skill not learned; skill = skill learned; notKnown = spell or\n")
+        fh.write("-- recipe not known; bound/notBound = hearthstone; onQuest = any in\n")
         fh.write("-- your log; solo = N: you've neither done nor got quest N (the way past a group quest);\n")
-        fh.write("-- ready = Q: Q is in your log ready to hand in; hasBelow = {item, N}: fewer than N in your bags.\n")
+        fh.write("-- ready = Q: Q is in your log ready to hand in; hasBelow = {item, N}: fewer than N in your bags;\n")
+        fh.write("-- hasAtLeast = {item, N}: N or more; turnedIn/notTurnedIn = {Q...}: all handed in / none;\n")
+        fh.write("-- notOnQuest = {Q...}: none in your log; notReady = Q: Q isn't ready to hand in;\n")
+        fh.write("-- available = {Q...}: each can be taken now; inZone = the zone you're in.\n")
+        fh.write("-- direct = true: a hand-in straight from the giver's window (the quest is never in your log).\n")
         fh.write("-- was = N: the step's number in the route this one replaced (your place moves over).\n")
         fh.write("local _, ns = ...\nns.HordeGuides = ns.HordeGuides or {}\nns.HordeGuides.horde = {\n")
         for n, s in enumerate(steps, 1):
