@@ -220,7 +220,7 @@ check("...but asking for the zone you're in still takes you there", s_.section =
 L, W, ns = azshara_at_29()
 lst = ns._dbg.list()
 st = ns._dbg.state()
-high = next(k for k in range(1, len(lst) + 1) if lst[k].section == HIGH_SEC and lst[k].t == "A" and lst[k].q == 91904)
+high = next(k for k in range(1, len(lst) + 1) if lst[k].section == HIGH_SEC and lst[k].t in ("A", "T") and lst[k].q == 91904)
 st.pos, st.hold, st.force = lst[high].i, False, None
 W.zone = "Azshara"; W.tick()
 check("(left at the level 56 crates)", ns.GuideCurrent()[0].section == HIGH_SEC, ns.GuideCurrent()[0].section)
@@ -368,6 +368,71 @@ W.log[865] = "complete"
 W.time = W.time + 1; W.tick()
 check("ready: it applies", ns._dbg.whenHolds(fake))
 
+# the other conditions a step can have (GuideData.lua's header)
+L, W, ns, lst = playing(race="Orc", raceId=2, level=20)
+L.execute("""HARNESS_G.IsPlayerSpell = function(id) return W.spells ~= nil and W.spells[id] == true end
+HARNESS_G.IsSpellKnown = function() return false end
+HARNESS_G.C_SpellBook = { IsSpellKnown = function() return false end }""")
+def holds(**fields):
+    t = L.table()
+    for k_, v in fields.items():
+        t[k_] = L.table_from(dict(enumerate(v, 1))) if isinstance(v, list) else v
+    W.time = W.time + 1
+    W.tick()
+    return ns._dbg.whenHolds(t)
+check("turnedin: not until you've handed it in", not holds(turnedIn=[1062]))
+W.completed[1062] = True
+check("...then yes", holds(turnedIn=[1062]))
+check("!turnedin: not once you have", not holds(notTurnedIn=[1062]) and holds(notTurnedIn=[1063]))
+W.log[97538] = "open"
+W.fire("QUEST_LOG_UPDATE")
+check("!onquest: not while it's in your log", not holds(notOnQuest=[97538]) and holds(notOnQuest=[97539]))
+check("available: not while it's in your log", not holds(available=[97538]))
+check("...or once it's done", not holds(available=[1062]))
+check("...but yes when you could take it", holds(available=[97539]))
+W.log[97538] = "complete"
+W.fire("QUEST_LOG_UPDATE")
+check("!complete: not once it's ready to hand in", not holds(notReady=97538))
+W.log[97538] = "open"
+W.fire("QUEST_LOG_UPDATE")
+check("...but yes while it isn't", holds(notReady=97538))
+W.items = L.table_from({14047: 59})
+check("has x60: not with 59", not holds(hasAtLeast=[14047, 60]))
+W.items = L.table_from({14047: 60})
+check("...yes with 60", holds(hasAtLeast=[14047, 60]))
+W.zone = "Orgrimmar"
+check("zone: not elsewhere", not holds(inZone="Thunder Bluff"))
+W.zone = "Thunder Bluff"
+check("...yes there", holds(inZone="Thunder Bluff"))
+check("skill: not without the profession", not holds(skill="Leatherworking"))
+W.skills = L.table_from({1: "Leatherworking"})
+W.time = W.time + 10
+check("...yes with it", holds(skill="Leatherworking"))
+check("!knows: yes while you don't know the recipe", holds(notKnown=1229432))
+W.spells = L.table_from({1229432: True})
+check("...not once you do", not holds(notKnown=1229432))
+# Camping 101's profession quests: only with that profession, and only while you don't know its camp recipe
+L, W, ns, lst = playing(race="Orc", raceId=2, level=5)
+L.execute("HARNESS_G.IsPlayerSpell = function() return false end HARNESS_G.IsSpellKnown = function() return false end HARNESS_G.C_SpellBook = { IsSpellKnown = function() return false end }")
+camp = next((k_ for k_ in range(1, len(lst) + 1) if lst[k_].t == "A" and lst[k_].skill == "Leatherworking"), None)
+check("the route has Camping 101's profession quests, for that profession", camp is not None)
+W.time = W.time + 1; W.tick()
+check("...without Leatherworking: passed", camp and ns._dbg.passed(camp))
+W.skills = L.table_from({1: "Leatherworking"})
+W.time = W.time + 10; W.tick()
+check("...with it: it applies", camp and not ns._dbg.passed(camp))
+# a quest handed in straight from the giver's window (never in your log): its hand-in
+# isn't passed as "never taken" - it waits like any other until you've handed it in
+L, W, ns, lst = playing(race="Orc", raceId=2, level=24)
+d = next((k_ for k_ in range(1, len(lst) + 1) if lst[k_].t == "T" and lst[k_].direct and not lst[k_].optional
+          and not lst[k_].turnedIn and not lst[k_].notTurnedIn), None)
+check("the route has hand-ins straight from the giver's window", d is not None)
+W.time = W.time + 1; W.tick()
+check("...not passed though it was never in your log", d and not ns._dbg.passed(d), d and (lst[d].q, lst[d].name))
+W.completed[lst[d].q] = True
+W.time = W.time + 1; W.tick()
+check("...passed once handed in", d and ns._dbg.passed(d))
+
 # an optional group quest you passed by (WANTED: Bruuz, its poster behind you): its
 # objective and hand-in further on don't hold you up, or point you at an elite
 L, W, ns, lst = playing(race="Orc", raceId=2, level=17)
@@ -438,7 +503,7 @@ check("a quest of the same name handed in under another ID counts", ns._dbg.why(
 # the last step you'd landed on
 L, W, ns = fresh(race="Orc", raceId=2, level=19)
 ns.db.guideListLayout = False
-BARRENS = "The Barrens (15-21)"
+BARRENS = next(g for g in re.findall(r'section="(The Barrens \(\d+-\d+\))"', open(ADDON + "GuideData.lua", encoding="utf-8").read()))
 ns.GuideFollowSection(BARRENS)
 W.tick()
 places, back = [ns._dbg.places()[0]], None
@@ -492,7 +557,7 @@ check("clicking Accept Egg Hunt marks Korran, not a nearby detour", got == ("Egg
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)
 check("no deathskips: they're opt-in upstream, and never on Hardcore", "Deathskip" not in data)
-check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.5 (guides/forever), GPL-3.0-only" in data)
+check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.7.2 (guides/forever), GPL-3.0-only" in data)
 # Mulgore is one of the maps Forever redrew: typed in Era's frame, converted to Forever's
 check("a typed Mulgore point lands where it is on Forever's map", 'text="The Venture Co. Mine", z=215, x=61.19, y=49.31' in data)
 # every start goes on to Silverpine Forest (the route's shared part starts there since 0.3.5)

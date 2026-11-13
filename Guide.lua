@@ -409,6 +409,8 @@ end
 -- a complete or hand-in step for a quest that isn't in your log and isn't handed in
 local function NotInLog(s)
     if not (questLogReady and s.q and (s.t == "C" or s.t == "T")) then return false end
+    -- handed in straight from the giver's window (cloth donations, Scourgestones...): never in your log
+    if s.direct then return false end
     return not StepInLog(s) and not StepCompleted(s)
 end
 
@@ -484,6 +486,14 @@ end
 -- What a step needs to be worth showing, checked as you play (GuideData.lua's
 -- header has the fields): a hearth only if it's bound there, a top-up only while
 -- you're short of that level, a weapon skill only if you can pay for it...
+-- a spell or recipe you know (any of the ways this client can say)
+function K.KnowsSpell(id)
+    if IsPlayerSpell and Safe(IsPlayerSpell, id) then return true end
+    if IsSpellKnown and Safe(IsSpellKnown, id) then return true end
+    if C_SpellBook and C_SpellBook.IsSpellKnown and Safe(C_SpellBook.IsSpellKnown, id) then return true end
+    return false
+end
+
 function K.SkillKnown(name)
     local now = GetTime()
     if not K.skills or now - K.skillsAt > 5 then
@@ -504,6 +514,27 @@ function K.WhenHolds(s)
     end
     if s.moneyMin and (Safe(GetMoney) or 0) < s.moneyMin then return false end
     if s.noSkill and K.SkillKnown(s.noSkill) then return false end
+    if s.skill and not K.SkillKnown(s.skill) then return false end
+    if s.notKnown and K.KnowsSpell(s.notKnown) then return false end
+    if s.inZone and Safe(GetRealZoneText) ~= s.inZone then return false end
+    for _, q in ipairs(s.turnedIn or K.NONE) do if not Completed(q) then return false end end
+    for _, q in ipairs(s.notTurnedIn or K.NONE) do if Completed(q) then return false end end
+    if questLogReady then
+        for _, q in ipairs(s.notOnQuest or K.NONE) do if InLog(q) then return false end end
+        if s.notReady then
+            local inLog, complete = InLog(s.notReady)
+            if inLog and complete then return false end
+        end
+        -- a quest you could take now: not done, not in your log, and (Questie's word) open to you
+        for _, q in ipairs(s.available or K.NONE) do
+            if Completed(q) or InLog(q) or (ns.QuestieIsDoable and ns.QuestieIsDoable(q) == false) then return false end
+        end
+    end
+    if s.hasAtLeast then
+        local get = (C_Item and C_Item.GetItemCount) or GetItemCount
+        local n = get and Safe(get, s.hasAtLeast[1])
+        if type(n) == "number" and n < s.hasAtLeast[2] then return false end
+    end
     if s.bound and not BoundAt(s.bound) then return false end
     if s.notBound and BoundAt(s.notBound) then return false end
     if s.solo and (Completed(s.solo) or InLog(s.solo)) then return false end
@@ -4845,10 +4876,17 @@ local function Load()
             for n, st in ipairs(data) do if st.was then map[st.was] = n end end
             -- a step's new number (dungeon and class steps keep theirs)
             local function Same(number) return number and (map[number] or (number >= 1000000 and number) or nil) end
-            -- a place: the same step, or the next one that's still in the route
+            -- a place: the same step, or the next one that's still in your route
+            -- (not one for another race or class, which isn't)
             local function Move(number)
                 if not number or number >= 1000000 then return number end
-                for k = number, number + 80 do if map[k] then return map[k] end end
+                local first
+                for k = number, number + 80 do
+                    local m = map[k]
+                    if m and byNumber[m] then return m end
+                    first = first or m
+                end
+                return first
             end
             local done = {}
             for number, v in pairs(state.done or {}) do

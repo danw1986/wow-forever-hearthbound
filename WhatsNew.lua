@@ -10,6 +10,16 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.9.9", items = {
+        { "Refreshed levelling route",
+          "Tonga's seed test and the oases in the Barrens no longer cross back and forth, Seer Graytongue comes during the Mulgore cougar hunt, Ashenvale Outrunners waits for your second Ashenvale visit, and the Dalaran traitors' chain (Prison Break In, Key to the City) is now on the route. Your place, skips and bookmarks carry over." },
+        { "Camping 101 for your professions",
+          "In the starting zones, the guide now offers each profession's Camping 101 quest, only if you have that profession and don't know its camp recipe yet." },
+        { "Skyborne Druids",
+          "The route now takes Skyborne Druids through the druid class quests the other druids get: Aquatic Form and Cure Poison." },
+        { "Quests handed in on the spot",
+          "Cloth donations, Scourgestones, Timbermaw feathers and other quests the game hands in straight from the giver's window now show as hand-in steps, instead of being passed by." },
+    } },
     { version = "0.9.8", items = {
         { "Quests for every new dungeon",
           "The dungeon journal now lists the quests for The Drowned City, Krol'dok Stronghold, Alcaz Island Prison and Blackmaw Hold, and the missing ones for Excavation Site and Dalaran: who gives each one, where, and the rewards. A few givers aren't known yet and say so." },
