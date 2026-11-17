@@ -709,6 +709,21 @@ local function ZoneOf(j)
 end
 
 K.HISTORY = 6 -- zones remembered for the "previous zone" buttons
+K.RECENT_MARK = 1200 -- seconds: a zone left this recently is picked up again by itself, even behind your place
+K.AUTO_ABOVE = 2     -- levels: following your zone by itself never takes you further above you than this
+
+-- Following the zone you walk into, by itself (no asking): only on along the
+-- route - not back to a part behind your place, unless you left that zone a
+-- moment ago (a trip into a city) or your place is well above you - and not
+-- to a part well above you. Passing through a zone on the way somewhere
+-- doesn't move the guide.
+function K.AutoZoneOK(j, zone, fromMark)
+    if not j then return false end
+    if (K.LevelFrom(j) or 0) > UnitLevel("player") + K.AUTO_ABOVE then return false end
+    if j >= routeCur or not K.FitsYou(routeCur) then return true end
+    local at = fromMark and state.zoneMarkAt and state.zoneMarkAt[zone]
+    return type(at) == "number" and time() - at < K.RECENT_MARK
+end
 
 -- Your place: the step, and - while you're following the route, not just
 -- looking - a bookmark for the step's zone (state.zoneMarks[zone] = step
@@ -728,6 +743,8 @@ local function Save()
     if not zone then return end
     state.zoneMarks = state.zoneMarks or {}
     state.zoneMarks[zone] = s.i
+    state.zoneMarkAt = state.zoneMarkAt or {}
+    state.zoneMarkAt[zone] = time() -- (an old bookmark isn't picked up by itself: K.AutoZoneOK)
     state.zoneHistory = state.zoneHistory or {}
     local h = state.zoneHistory
     if h[1] ~= zone then
@@ -1830,6 +1847,8 @@ local function PromptZone()
     if markJ and not K.FitsYou(markJ) then markJ = nil end
     if ns.db.guideAutoZone then
         HideZonePrompt()
+        -- (only on along the route, or back to a zone you just left: K.AutoZoneOK)
+        if not K.AutoZoneOK(markJ or SectionUseful(offer), zone, markJ ~= nil) then return end
         if markJ then
             ns.GuideResumeZone(zone)
         else

@@ -236,6 +236,37 @@ arrive(W, main)
 s_, j, _ = ns.GuideCurrent()
 check(f"...walking into {main} at your level brings it back down", s_.section != HIGH_SEC, (j, s_.section))
 
+# 6d. on the way through a zone the route has an earlier part in (Hillsbrad, then
+# Silverpine on the walk to the Undercity): the guide doesn't go back there by itself
+L, W, ns = fresh(race="Orc", raceId=2, level=24)
+ns.db.guideAutoZone, ns.db.guideZonePrompt, ns.db.guideSkipGrey = True, True, True
+L.execute("W.clock = 100000 HARNESS_G.time = function() return W.clock end")
+lst = ns._dbg.list()
+st = ns._dbg.state()
+hb = next(k for k in range(1, len(lst) + 1) if (lst[k].section or "").startswith("Hillsbrad Foothills (22-") and lst[k].t == "A")
+sp = next(k for k in range(hb, 0, -1) if lst[k].zoneName == "Silverpine Forest" and lst[k].t in ("A", "C", "T")
+          and (lst[k].section or "") != lst[hb].section)
+arrive(W, "Hillsbrad Foothills")
+st.pos, st.hold, st.force = lst[hb].i, False, None
+st.zoneMarks, st.zoneMarkAt = L.table(), L.table()
+W.tick()
+here = ns.GuideCurrent()[0].section
+check("(on Hillsbrad's 22-25 part)", here == lst[hb].section, here)
+arrive(W, "Silverpine Forest")
+check("into Silverpine on the way: the guide stays on Hillsbrad", ns.GuideCurrent()[0].section == lst[hb].section,
+      ns.GuideCurrent()[0].section)
+st.zoneMarks = L.table_from({"Silverpine Forest": lst[sp].i})
+st.zoneMarkAt = L.table_from({"Silverpine Forest": 100000 - 7200})
+arrive(W, "Hillsbrad Foothills")
+arrive(W, "Silverpine Forest")
+check("...nor to a bookmark there from hours ago", ns.GuideCurrent()[0].section == lst[hb].section, ns.GuideCurrent()[0].section)
+st.zoneMarks = L.table_from({"Silverpine Forest": lst[sp].i})
+st.zoneMarkAt = L.table_from({"Silverpine Forest": 100000 - 60})
+arrive(W, "Hillsbrad Foothills")
+arrive(W, "Silverpine Forest")
+s_, j, _ = ns.GuideCurrent()
+check("...but a zone you left a minute ago picks up where you were", s_.section == lst[sp].section, (j, s_.section))
+
 # 6c. find my place: a level 60 sealed crate handed in at 29 doesn't put you at the end of the route
 L, W, ns = fresh(race="Orc", raceId=2, level=29)
 lst = ns._dbg.list()
