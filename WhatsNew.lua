@@ -10,6 +10,11 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.10.1", items = {
+        { "The guide stays put as you travel",
+          "Walking or flying through a zone the route had an earlier part in no longer sends the guide back there. Following your zone by itself only moves the guide on along the route, or back to a zone you left in the last 20 minutes, and never to a part more than 2 levels above you. Choose a zone or Back to the previous zone still take you anywhere you like.",
+          settings = "guide" },
+    } },
     { version = "0.10.0", items = {
         { "The Riverglades and Shen'dralas",
           "Forever's two new zones are now part of the levelling route: the Riverglades from Rog'mar at about 41-44, and Shen'dralas at about 46-47. The guide takes you in by flight or boat, whichever you can use." },
