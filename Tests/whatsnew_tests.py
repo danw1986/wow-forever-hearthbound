@@ -102,6 +102,14 @@ check("/hb new shows it anyway", shown(G))
 L, G, ns = login("dev", {"theme": "warrior"})
 check("a copy without a version number doesn't pop up", not shown(G))
 
+# following your zone by itself is off now: once for everyone, and for new players
+L, G, ns = login("0.10.2", {"guideAutoZone": True, "whatsNewSeen": "0.10.2"})
+check("updating: following your zone by itself is switched off once", G.HearthboundDB.guideAutoZone is False)
+L, G, ns = login("0.10.2", {"guideAutoZone": True, "autoZoneOffApplied": True, "whatsNewSeen": "0.10.2"})
+check("...and stays on if you turn it back on afterwards", G.HearthboundDB.guideAutoZone is True)
+L, G, ns = login("0.10.2")
+check("a new player has it off", G.HearthboundDB.guideAutoZone is False)
+
 # the version maths and the list
 check("0.9.10 is newer than 0.9.9", ns.VersionNewer("0.9.10", "0.9.9") and not ns.VersionNewer("0.9.9", "0.9.10"))
 check("1.0 is newer than 0.9.6", ns.VersionNewer("1.0", "0.9.6"))

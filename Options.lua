@@ -417,9 +417,9 @@ local function BuildSettingsPage(page)
     Find(col, unskip, "guide unskip skip list always skip right-click")
     col:Header("Adapting to you")
     col:Check("Follow the zone I'm in", "guideAutoZone",
-        "Arriving in a zone (or logging in) where the route has steps worth doing, the guide switches to that zone's section by itself - the one nearest your level - and says so in chat.")
+        "Off (the default): changing zones never moves the guide - it stays on your place, and remembers where you were in each zone for when you choose one (Choose a zone, Back to the previous zone, or the prompt below). On: arriving in a zone, the guide moves on to that zone's part of the route by itself (never back, and never well above your level).")
     col:Check("Ask to switch when I arrive in a new zone", "guideZonePrompt",
-        "Arriving in a zone the guide isn't following, a prompt offers that zone's section (the one nearest your level). Stay: it won't ask about that zone again until you leave and come back.")
+        "Arriving in a zone the guide isn't on, a prompt offers to switch to it - where you left off there, or its part at your level. Nothing moves unless you press Switch. Stay: it won't ask about that zone again until you leave and come back.")
     col:Check("Send me to nearby quests", "guideAdaptive",
         "When a quest in your log can be got on with close by - mobs or items it needs, or its hand-in - the guide shows it as Nearby and the arrow points there until it's done.")
     col:Slider("How near is nearby (yards)", "guideAdaptYards", "How close a quest objective or hand-in has to be to send you there.", 100, 800, 25, "%d")

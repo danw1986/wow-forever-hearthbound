@@ -10,6 +10,11 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.10.2", items = {
+        { "The guide only moves when you say",
+          "Changing zones no longer moves the guide: it stays on your place. It still remembers where you were in each zone, so Choose a zone, Back to the previous zone and the prompt when you arrive somewhere new pick up there - nothing moves unless you press Switch. Want the old way? Turn Follow the zone I'm in back on.",
+          settings = "guide" },
+    } },
     { version = "0.10.1", items = {
         { "The guide stays put as you travel",
           "Walking or flying through a zone the route had an earlier part in no longer sends the guide back there. Following your zone by itself only moves the guide on along the route, or back to a zone you left in the last 20 minutes, and never to a part more than 2 levels above you. Choose a zone or Back to the previous zone still take you anywhere you like.",

@@ -267,6 +267,29 @@ arrive(W, "Silverpine Forest")
 s_, j, _ = ns.GuideCurrent()
 check("...but a zone you left a minute ago picks up where you were", s_.section == lst[sp].section, (j, s_.section))
 
+# 6e. the defaults now: changing zones never moves the guide (you choose), and it
+# still remembers where you were in each zone for when you do
+L, W, ns = fresh(race="Orc", raceId=2, level=24)
+ns.db.guideAutoZone, ns.db.guideZonePrompt, ns.db.guideSkipGrey = False, True, True
+L.execute("W.clock = 100000 HARNESS_G.time = function() return W.clock end")
+lst = ns._dbg.list()
+st = ns._dbg.state()
+arrive(W, "Hillsbrad Foothills")
+st.pos, st.hold, st.force = lst[hb].i, False, None
+st.zoneMarks = L.table_from({"Silverpine Forest": lst[sp].i})
+st.zoneMarkAt = L.table_from({"Silverpine Forest": 100000 - 60})
+W.tick()
+moved = []
+for z in ("Silverpine Forest", "Tirisfal Glades", "The Barrens", "Ashenvale", "The Hinterlands", "Hillsbrad Foothills"):
+    arrive(W, z)
+    if ns.GuideCurrent()[0].section != lst[hb].section:
+        moved.append((z, ns.GuideCurrent()[0].section))
+check("changing zones never moves the guide", not moved, moved)
+check("...and it still knows where you were in Hillsbrad", st.zoneMarks["Hillsbrad Foothills"] == lst[hb].i)
+ns.GuideResumeZone("Silverpine Forest")
+check("choosing Silverpine picks up where you were there", ns.GuideCurrent()[0].section == lst[sp].section,
+      ns.GuideCurrent()[0].section)
+
 # 6c. find my place: a level 60 sealed crate handed in at 29 doesn't put you at the end of the route
 L, W, ns = fresh(race="Orc", raceId=2, level=29)
 lst = ns._dbg.list()

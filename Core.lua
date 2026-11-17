@@ -86,7 +86,7 @@ ns.defaults = {
     guideSkipLowValue = false, -- pass by quests marked optional (a long walk for their XP)
     guideItemButton = true,    -- a button for the item the current step needs you to use
     guideZonePrompt = true,  -- ask to switch sections when you arrive in a new zone
-    guideAutoZone = true,    -- ...or just switch, following the zone you're in
+    guideAutoZone = false,   -- ...or just switch, following the zone you're in (off: the guide only moves when you say)
     guideStepPopup = true,   -- a short note on screen when the guide moves on
     guideCompact = false,    -- the guide window shows only the current step
     hbPlates = true,          -- nameplates drawn in the addon's style (NamePlates.lua)
@@ -345,6 +345,12 @@ ns.On("ADDON_LOADED", function(_, name)
         HearthboundDB.autoAccept = HearthboundDB.autoQuest
     end
     CopyDefaults(ns.defaults, HearthboundDB)
+    -- the guide used to follow the zone you walked into by itself; switch that off once
+    -- (changing zones never moves it now unless you turn it back on)
+    if not HearthboundDB.autoZoneOffApplied then
+        HearthboundDB.guideAutoZone = false
+        HearthboundDB.autoZoneOffApplied = true
+    end
     -- the panel used to fade in combat by default; switch that off once for existing settings
     if not HearthboundDB.combatFadeOffApplied then
         HearthboundDB.combatHide = false
