@@ -17,8 +17,8 @@ local QUEST_BONUS, QUEST_BONUS_CAP = 1.5, 9 -- per useful open quest in a zone
 local ZONES = {
     -- new in WoW Forever
     { 0, "Zephras Isle", 1, 12, nil, new = true, starter = true }, -- Skyborne start
-    { 0, "Riverglades", 35, 45, nil, new = true },  -- Eastern Kingdoms, off Redridge / Burning Steppes
-    { 0, "Shen'dralas", 40, 46, nil, new = true },  -- estimated: not announced, beta shows level 43 mobs
+    { 2548, "Riverglades", 37, 46, nil, new = true },  -- Eastern Kingdoms, off Redridge / Burning Steppes
+    { 2652, "Shen'dralas", 41, 47, nil, new = true },  -- estimated: not announced, beta shows level 43 mobs
     { 0, "Mount Hyjal", 58, 60, nil, new = true },  -- endgame, via Darkwhisper Gorge in Winterspring
 
     -- Classic

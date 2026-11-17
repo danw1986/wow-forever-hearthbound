@@ -10,6 +10,14 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.10.0", items = {
+        { "The Riverglades and Shen'dralas",
+          "Forever's two new zones are now part of the levelling route: the Riverglades from Rog'mar at about 41-44, and Shen'dralas at about 46-47. The guide takes you in by flight or boat, whichever you can use." },
+        { "A better route to 60",
+          "Every zone was looked at again: about 75 more quests on the way, a quarter less grinding, fewer walks back over ground you've just left, and a reworked 50-60. Your place, skips and bookmarks carry over." },
+        { "Steps that know your flight paths",
+          "Where the route can fly or walk, it picks by the flight paths you have (from the flight maps you've opened and the ones it took you to)." },
+    } },
     { version = "0.9.9", items = {
         { "Refreshed levelling route",
           "Tonga's seed test and the oases in the Barrens no longer cross back and forth, Seer Graytongue comes during the Mulgore cougar hunt, Ashenvale Outrunners waits for your second Ashenvale visit, and the Dalaran traitors' chain (Prison Break In, Key to the City) is now on the route. Your place, skips and bookmarks carry over." },

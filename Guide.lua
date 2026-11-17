@@ -47,6 +47,7 @@ local ZONE_MAPS = {
     [405] = 1443, [15] = 1445, [8] = 1435, [440] = 1446, [357] = 1444, [47] = 1425, [490] = 1449,
     [361] = 1448, [618] = 1452, [3] = 1418, [51] = 1427, [28] = 1422, [139] = 1423,
     [36] = 1416, [16] = 1447, [46] = 1428, [1377] = 1451, [16593] = 2521, [493] = 1450,
+    [16591] = 2548, [16651] = 2652, -- the Riverglades, Shen'dralas
 }
 
 local list = {}    -- this character's steps, in order
@@ -486,6 +487,22 @@ end
 -- What a step needs to be worth showing, checked as you play (GuideData.lua's
 -- header has the fields): a hearth only if it's bound there, a top-up only while
 -- you're short of that level, a weapon skill only if you can pay for it...
+-- a flight path you know: on a flight map you've opened, or one the route had you
+-- get. nil: the guide can't tell (you've never opened a flight map)
+function K.KnowsTaxi(name)
+    local want = name:lower()
+    local known = ns.cdb.flightsKnown
+    for node in pairs(known or K.NONE) do
+        local n = (node:match("^[^,]+") or node):lower()
+        if n == want or n:find(want, 1, true) then return true end
+    end
+    for _, s in ipairs(list) do
+        if s.t == "FP" and s.text and state.done[s.i] and s.text:lower():find(want, 1, true) then return true end
+    end
+    if known and next(known) then return false end
+    return nil
+end
+
 -- a spell or recipe you know (any of the ways this client can say)
 function K.KnowsSpell(id)
     if IsPlayerSpell and Safe(IsPlayerSpell, id) then return true end
@@ -517,6 +534,10 @@ function K.WhenHolds(s)
     if s.skill and not K.SkillKnown(s.skill) then return false end
     if s.notKnown and K.KnowsSpell(s.notKnown) then return false end
     if s.inZone and Safe(GetRealZoneText) ~= s.inZone then return false end
+    if s.notInZone and Safe(GetRealZoneText) == s.notInZone then return false end
+    -- a flight path: when the guide can't tell, you have the ones the route took you to
+    if s.taxi and K.KnowsTaxi(s.taxi) == false then return false end
+    if s.notTaxi and K.KnowsTaxi(s.notTaxi) ~= false then return false end
     for _, q in ipairs(s.turnedIn or K.NONE) do if not Completed(q) then return false end end
     for _, q in ipairs(s.notTurnedIn or K.NONE) do if Completed(q) then return false end end
     if questLogReady then
