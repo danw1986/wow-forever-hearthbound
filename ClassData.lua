@@ -1,6 +1,6 @@
 -- Each class's specs and stat weights, class quest chains and talent plans.
 -- Rebuilt by Tests/class_import.py.
--- Adapted from github.com/fitzforge/polestar v0.3.7.2, GPL-3.0-only.
+-- Adapted from github.com/fitzforge/polestar v0.4.0.1, GPL-3.0-only.
 -- weights: per spec, one point of the main stat is about 1 (dps = melee weapon DPS, rdps = ranged).
 -- quests: min/max = levels; ends = the hand-ins that finish it (the first that fits your race);
 -- spells = what it teaches, also a sign it's done; gear = it pays gear too, so finish it anyway.
@@ -11,9 +11,9 @@ ns.CLASS_DATA = {
     default = "arms", summary = "Level as Arms with a two-hander (Mortal Strike, Sweeping Strikes) or Fury (Enrage, Death Wish, then Flurry and Bloodthirst with two weapons). Protection is slower alone but ready to tank any dungeon on the way.",
     specs = {{key="arms", label="Arms", names={"arms"}}, {key="fury", label="Fury", names={"fury"}}, {key="protection", label="Protection (tank)", names={"protection"}}},
     weights = {
-      arms = {str=1, agi=0.6, sta=0.5, spi=0.1, armor=0.02, ap=0.5, crit=10, hit=9, dps=7, rdps=0.5, hp5=1, health=0.05, defense=0.2, dodge=3, parry=3, block=0.3, blockValue=0.05},
-      fury = {str=1, agi=0.65, sta=0.5, spi=0.1, armor=0.02, ap=0.5, crit=11, hit=11, dps=6.5, rdps=0.5, hp5=1, health=0.05, defense=0.2, dodge=3, parry=3},
-      protection = {sta=1, str=0.6, agi=0.7, armor=0.06, defense=1.2, dodge=12, parry=12, block=8, blockValue=0.5, hit=6, crit=4, ap=0.25, dps=2.5, rdps=0.3, hp5=1.5, health=0.1, spi=0.05},
+      arms = {str=1, agi=0.6, sta=0.5, spi=0.1, armor=0.02, ap=0.5, crit=10, hit=9, dps=7, rdps=0.5, hp5=1, health=0.05, defense=0.2, dodge=3, parry=3, block=0.3, blockValue=0.05, haste=6, expertise=8.1, armorPen=3},
+      fury = {str=1, agi=0.65, sta=0.5, spi=0.1, armor=0.02, ap=0.5, crit=11, hit=11, dps=6.5, rdps=0.5, hp5=1, health=0.05, defense=0.2, dodge=3, parry=3, haste=6.6, expertise=9.9, armorPen=3.3},
+      protection = {sta=1, str=0.6, agi=0.7, armor=0.06, defense=1.2, dodge=12, parry=12, block=8, blockValue=0.5, hit=6, crit=4, ap=0.25, dps=2.5, rdps=0.3, hp5=1.5, health=0.1, spi=0.05, haste=2, expertise=5.4, armorPen=1},
     },
     quests = {
       {id="haggards-weapons", title="Defensive Stance and a Weapon", min=10, max=11, why="Defensive Stance at 10 and a one-hand weapon of your choice from Stormwind, Ironforge or Darnassus.", faction="Alliance", spells={71}, gear=true, ends={{q=1667}, {q=1693, races={"nightelf"}}, {q=1682, races={"dwarf", "gnome"}}, {q=94003, races={"skyborne"}}}},
@@ -190,9 +190,9 @@ ns.CLASS_DATA = {
     default = "retribution", summary = "Level as Retribution (quickest solo, with a two-hander and Seal of Command) or Protection (safe group pulls, dungeon-tank ready). Holy suits raids; it can level through its melee build, more slowly, if you want to heal dungeons on the way.",
     specs = {{key="holy", label="Holy (healer)", names={"holy"}}, {key="protection", label="Protection (tank)", names={"protection"}}, {key="retribution", label="Retribution", names={"retribution"}}},
     weights = {
-      holy = {int=1, heal=0.65, sp=0.15, spHoly=0.1, mp5=2.2, spi=0.5, sta=0.45, spellCrit=7, str=0.15, armor=0.005, dps=0.5, health=0.05, mana=0.06},
-      protection = {sta=1, armor=0.05, defense=1, dodge=10, parry=10, block=6, blockValue=0.4, str=0.5, agi=0.5, int=0.4, sp=0.5, spHoly=0.5, spellHit=4, hit=4, mp5=1, dps=2, health=0.1},
-      retribution = {str=1, agi=0.55, sta=0.5, int=0.35, spi=0.15, armor=0.02, ap=0.5, crit=9, hit=9, sp=0.3, spHoly=0.3, mp5=1, dps=7, hp5=0.5, health=0.05, mana=0.02},
+      holy = {int=1, heal=0.65, sp=0.15, spHoly=0.1, mp5=2.2, spi=0.5, sta=0.45, spellCrit=7, str=0.15, armor=0.005, dps=0.5, health=0.05, mana=0.06, haste=4.2},
+      protection = {sta=1, armor=0.05, defense=1, dodge=10, parry=10, block=6, blockValue=0.4, str=0.5, agi=0.5, int=0.4, sp=0.5, spHoly=0.5, spellHit=4, hit=4, mp5=1, dps=2, health=0.1, haste=2, expertise=3.6, armorPen=1},
+      retribution = {str=1, agi=0.55, sta=0.5, int=0.35, spi=0.15, armor=0.02, ap=0.5, crit=9, hit=9, sp=0.3, spHoly=0.3, mp5=1, dps=7, hp5=0.5, health=0.05, mana=0.02, haste=5.4, expertise=8.1, armorPen=2.7},
     },
     quests = {
       {id="tyrs-watch", title="Tyr's Watch and Redemption (Forsaken)", min=1, max=13, why="Redemption to raise fallen allies, plus a weapon and a shield for a new Forsaken paladin.", faction="Horde", races={"scourge"}, spells={7328}, gear=true, ends={{q=94441}}},
@@ -368,9 +368,9 @@ ns.CLASS_DATA = {
     default = "beastmastery", summary = "Level as Beast Mastery: your pet tanks and does much of the damage, so you rarely stop. Marksmanship hits harder from range with Careful Aim and Sniper Shot; Survival fights in melee with Predator's Edge and Lacerating Strikes.",
     specs = {{key="beastmastery", label="Beast Mastery", names={"beastmastery"}}, {key="marksmanship", label="Marksmanship", names={"marksmanship"}}, {key="survival", label="Survival", names={"survival"}}},
     weights = {
-      beastmastery = {agi=1, rap=0.45, ap=0.5, crit=10, hit=10, rdps=6.5, sta=0.55, int=0.35, spi=0.2, str=0.1, armor=0.02, mp5=1.2, dps=0.5, mana=0.02, health=0.05},
-      marksmanship = {agi=1, rap=0.45, ap=0.5, crit=11, hit=11, rdps=7, sta=0.5, int=0.4, spi=0.2, str=0.1, armor=0.02, mp5=1.2, dps=0.5, mana=0.02, health=0.05},
-      survival = {agi=1.1, rap=0.45, ap=0.55, crit=11, hit=10, rdps=6.5, sta=0.55, int=0.35, spi=0.2, str=0.15, armor=0.02, mp5=1, dps=1, mana=0.02, health=0.05},
+      beastmastery = {agi=1, rap=0.45, ap=0.5, crit=10, hit=10, rdps=6.5, sta=0.55, int=0.35, spi=0.2, str=0.1, armor=0.02, mp5=1.2, dps=0.5, mana=0.02, health=0.05, haste=7, expertise=0.5, armorPen=3},
+      marksmanship = {agi=1, rap=0.45, ap=0.5, crit=11, hit=11, rdps=7, sta=0.5, int=0.4, spi=0.2, str=0.1, armor=0.02, mp5=1.2, dps=0.5, mana=0.02, health=0.05, haste=7.7, expertise=0.5, armorPen=3.3},
+      survival = {agi=1.1, rap=0.45, ap=0.55, crit=11, hit=10, rdps=6.5, sta=0.55, int=0.35, spi=0.2, str=0.15, armor=0.02, mp5=1, dps=1, mana=0.02, health=0.05, haste=7.7, expertise=1, armorPen=3.3},
     },
     quests = {
       {id="taming-the-beast", title="Taming the Beast", min=10, max=10, why="Your own pet at 10: three practice tames with a Taming Rod teach Tame Beast, then Beast Training.", faction="Alliance", races={"human", "dwarf", "nightelf", "skyborne"}, spells={1515, 5149}, ends={{q=94793}, {q=6103, races={"nightelf"}}, {q=6086, races={"dwarf"}}, {q=94050, races={"skyborne"}}}},
@@ -544,9 +544,9 @@ ns.CLASS_DATA = {
     default = "combat", summary = "Level as Combat with a sword (Riposte, Blade Flurry, Adrenaline Rush) for the steadiest kills, or Assassination with daggers and poisons (Mutilate). Subtlety's Hemorrhage plan suits stealth openers and is slower solo.",
     specs = {{key="assassination", label="Assassination", names={"assassination"}}, {key="combat", label="Combat", names={"combat"}}, {key="subtlety", label="Subtlety", names={"subtlety"}}},
     weights = {
-      assassination = {agi=1, str=0.55, ap=0.55, crit=11, hit=11, dps=5.5, sta=0.45, armor=0.02, dodge=2, rdps=0.4, hp5=0.5, health=0.05, spi=0.05},
-      combat = {agi=1, str=0.55, ap=0.55, crit=10, hit=12, dps=6, sta=0.45, armor=0.02, dodge=2, rdps=0.4, hp5=0.5, health=0.05, spi=0.05},
-      subtlety = {agi=1, str=0.5, ap=0.5, crit=10, hit=10, dps=5.5, sta=0.5, armor=0.02, dodge=2, rdps=0.4, hp5=0.5, health=0.05, spi=0.05},
+      assassination = {agi=1, str=0.55, ap=0.55, crit=11, hit=11, dps=5.5, sta=0.45, armor=0.02, dodge=2, rdps=0.4, hp5=0.5, health=0.05, spi=0.05, haste=6.6, expertise=9.9, armorPen=3.3},
+      combat = {agi=1, str=0.55, ap=0.55, crit=10, hit=12, dps=6, sta=0.45, armor=0.02, dodge=2, rdps=0.4, hp5=0.5, health=0.05, spi=0.05, haste=6, expertise=10.8, armorPen=3},
+      subtlety = {agi=1, str=0.5, ap=0.5, crit=10, hit=10, dps=5.5, sta=0.5, armor=0.02, dodge=2, rdps=0.4, hp5=0.5, health=0.05, spi=0.05, haste=6, expertise=9, armorPen=3},
     },
     quests = {
       {id="blade-of-cunning", title="Blade of Cunning", min=10, max=12, why="A dagger at 10 from your home town's rogue quests.", faction="Alliance", ends={{q=2242, races={"nightelf"}}, {q=2239, races={"dwarf", "gnome"}}, {q=2206, races={"human", "skyborne"}}}},
@@ -557,7 +557,7 @@ ns.CLASS_DATA = {
       {id="poisons", title="Poisons", min=20, max=26, why="Forever teaches Poisons through this chain, not the trainer; the Thistle Tea recipe comes with it.", faction="Horde", spells={2842}, gear=true, ends={{q=2480}}},
       {id="the-horn-of-xelthos", title="The Horn of Xelthos", min=23, max=26, why="The Pyrewood Signet Ring, C's payment for a solo job inside Shadowfang Keep.", ends={{q=78307}}},
       {id="ravenholdt", title="Ravenholdt", min=24, max=36, why="Opens Ravenholdt Manor, the hidden rogue house in the Alterac hills, and Myrokos's jobs against the Syndicate.", ends={{q=96786}}},
-      {id="the-eye-of-bhossca", title="The Eye of Bhossca", min=30, max=35, why="The Ruby-Adorned Blade, C's payment for a solo job inside the Scarlet Monastery.", ends={{q=78699}}},
+      {id="the-eye-of-bhossca", title="The Eye of Bhossca", min=30, max=35, why="The Ruby-Adorned Blade, C's payment for a solo job in the Scarlet Monastery, after The Horn of Xelthos.", ends={{q=78699}}},
       {id="the-azure-key", title="The Azure Key", min=50, max=52, why="Ravenholdt reputation and experience at 50; Classic's item choice may be gone on Forever.", ends={{q=8236}}},
     },
     builds = {
@@ -726,9 +726,9 @@ ns.CLASS_DATA = {
     default = "shadow", summary = "Level as Shadow (Spirit Tap, Mind Flay, Shadowform) for the fastest kills and least drinking. Discipline levels with Smite and Penance behind a strong shield; Holy is the dungeon healer and slower alone.",
     specs = {{key="discipline", label="Discipline", names={"discipline"}}, {key="holy", label="Holy (healer)", names={"holy"}}, {key="shadow", label="Shadow", names={"shadow"}}},
     weights = {
-      discipline = {int=1, spi=0.8, heal=0.55, sp=0.45, mp5=2, sta=0.5, spellCrit=6, spellHit=3, rdps=2.5, armor=0.005, mana=0.06, health=0.05},
-      holy = {int=1, spi=0.85, heal=0.7, sp=0.3, mp5=2.2, sta=0.45, spellCrit=6, rdps=2, armor=0.005, mana=0.06, health=0.05},
-      shadow = {int=0.85, spi=0.9, sta=0.65, sp=1, spShadow=1, spellHit=9, spellCrit=3, mp5=1.8, rdps=3, heal=0.05, armor=0.005, mana=0.05, health=0.06},
+      discipline = {int=1, spi=0.8, heal=0.55, sp=0.45, mp5=2, sta=0.5, spellCrit=6, spellHit=3, rdps=2.5, armor=0.005, mana=0.06, health=0.05, haste=3.6},
+      holy = {int=1, spi=0.85, heal=0.7, sp=0.3, mp5=2.2, sta=0.45, spellCrit=6, rdps=2, armor=0.005, mana=0.06, health=0.05, haste=3.6},
+      shadow = {int=0.85, spi=0.9, sta=0.65, sp=1, spShadow=1, spellHit=9, spellCrit=3, mp5=1.8, rdps=3, heal=0.05, armor=0.005, mana=0.05, health=0.06, haste=4},
     },
     quests = {
       {id="priest-robes", title="Priest Robes at 5", min=5, max=6, why="A free uncommon robe at 5: heal and fortify a wounded guard near your first town.", faction="Alliance", races={"human", "dwarf", "gnome", "nightelf"}, ends={{q=5621, races={"nightelf"}}, {q=5625, races={"dwarf", "gnome"}}, {q=5624, races={"human"}}}},
@@ -908,9 +908,9 @@ ns.CLASS_DATA = {
     default = "enhancement", summary = "Level as Enhancement (Flurry, Stormstrike, Maelstrom Weapon) for steady melee with few rests, or Elemental (Lightning Overload, Lava Burst) to kill from range. Restoration heals dungeons well and levels slowly alone.",
     specs = {{key="elemental", label="Elemental", names={"elemental"}}, {key="enhancement", label="Enhancement", names={"enhancement"}}, {key="restoration", label="Restoration (healer)", names={"restoration"}}},
     weights = {
-      elemental = {int=1, sp=0.9, spNature=0.9, spFire=0.3, spFrost=0.2, spellCrit=8, spellHit=8, mp5=2, spi=0.35, sta=0.5, str=0.2, agi=0.15, armor=0.01, dps=1.5, mana=0.06, health=0.05},
-      enhancement = {str=1, agi=0.7, ap=0.5, crit=9, hit=9, dps=7, sta=0.5, int=0.35, spi=0.15, armor=0.02, mp5=1, sp=0.15, spNature=0.15, block=0.3, health=0.05, mana=0.02},
-      restoration = {int=1, heal=0.7, mp5=2.4, spi=0.35, sta=0.45, spellCrit=6, sp=0.1, armor=0.005, dps=0.5, mana=0.06, health=0.05},
+      elemental = {int=1, sp=0.9, spNature=0.9, spFire=0.3, spFrost=0.2, spellCrit=8, spellHit=8, mp5=2, spi=0.35, sta=0.5, str=0.2, agi=0.15, armor=0.01, dps=1.5, mana=0.06, health=0.05, haste=6.4},
+      enhancement = {str=1, agi=0.7, ap=0.5, crit=9, hit=9, dps=7, sta=0.5, int=0.35, spi=0.15, armor=0.02, mp5=1, sp=0.15, spNature=0.15, block=0.3, health=0.05, mana=0.02, haste=5.4, expertise=8.1, armorPen=2.7},
+      restoration = {int=1, heal=0.7, mp5=2.4, spi=0.35, sta=0.45, spellCrit=6, sp=0.1, armor=0.005, dps=0.5, mana=0.06, health=0.05, haste=3.6},
     },
     quests = {
       {id="call-of-earth", title="Call of Earth", min=4, max=5, why="Your Earth Totem: without it no earth totem can be cast. Stoneskin Totem comes with it at level 4.", faction="Alliance", spells={8071}, gear=true, ends={{q=94375}}},
@@ -1090,13 +1090,13 @@ ns.CLASS_DATA = {
     default = "frost", summary = "Level as Frost (the safest: slows, freezes and Ice Barrier) or Fire (more damage, with Pyroblast openers and Blast Wave). Arcane builds around Arcane Blast and Arcane Power and wants more mana between pulls.",
     specs = {{key="arcane", label="Arcane", names={"arcane"}}, {key="fire", label="Fire", names={"fire"}}, {key="frost", label="Frost", names={"frost"}}},
     weights = {
-      arcane = {int=1, sp=1.1, spArcane=1.1, spFire=0.4, spFrost=0.4, spellCrit=7, spellHit=9, spi=0.55, sta=0.55, mp5=1.8, rdps=1.5, armor=0.005, mana=0.07, health=0.05},
-      fire = {int=0.9, sp=1.1, spFire=1.1, spFrost=0.2, spArcane=0.2, spellCrit=9, spellHit=9, spi=0.5, sta=0.55, mp5=1.6, rdps=1.5, armor=0.005, mana=0.06, health=0.05},
-      frost = {int=0.9, sp=1.1, spFrost=1.1, spFire=0.2, spArcane=0.2, spellCrit=6, spellHit=9, spi=0.6, sta=0.6, mp5=1.8, rdps=1.5, armor=0.005, mana=0.06, health=0.06},
+      arcane = {int=1, sp=1.1, spArcane=1.1, spFire=0.4, spFrost=0.4, spellCrit=7, spellHit=9, spi=0.55, sta=0.55, mp5=1.8, rdps=1.5, armor=0.005, mana=0.07, health=0.05, haste=5.6},
+      fire = {int=0.9, sp=1.1, spFire=1.1, spFrost=0.2, spArcane=0.2, spellCrit=9, spellHit=9, spi=0.5, sta=0.55, mp5=1.6, rdps=1.5, armor=0.005, mana=0.06, health=0.05, haste=7.2},
+      frost = {int=0.9, sp=1.1, spFrost=1.1, spFire=0.2, spArcane=0.2, spellCrit=6, spellHit=9, spi=0.6, sta=0.6, mp5=1.8, rdps=1.5, armor=0.005, mana=0.06, health=0.06, haste=4.8},
     },
     quests = {
       {id="ju-ju-heaps", title="Ley or Arcane Staff or Orb", min=10, max=12, why="A staff or an off-hand orb at 10: Orcs and Trolls on the Echo Isles, the Undead at a Tirisfal farm.", faction="Horde", ends={{q=1882, races={"scourge", "troll"}}, {q=1884, races={"orc", "troll", "scourge"}}}},
-      {id="staff-or-orb", title="Ley or Arcane Staff or Orb", min=10, max=15, why="A staff or an off-hand orb at 10 from your home town's mage trainer; Skyborne add a wand.", faction="Alliance", ends={{q=1880, races={"human", "gnome"}}, {q=1861, races={"human", "gnome", "skyborne"}}, {q=93797, races={"skyborne"}}}},
+      {id="staff-or-orb", title="Ley or Arcane Staff or Orb", min=10, max=15, why="A staff or an off-hand orb at 10 from your home town's mage trainer; Skyborne add a wand.", faction="Alliance", ends={{q=93791, races={"human", "gnome"}}, {q=1861, races={"human", "gnome", "skyborne"}}, {q=93797, races={"skyborne"}}}},
       {id="manaweave-robe", title="Manaweave Robe", min=15, max=17, why="A robe at 15 for Alliance mages, from Stormwind and Loch Modan.", faction="Alliance", ends={{q=1941}}},
       {id="spellfire-robes", title="Spellfire Robes", min=15, max=18, why="A robe at 15 for Horde mages, from the Undercity and Silverpine Forest.", faction="Horde", ends={{q=1962}}},
       {id="teleports", title="Teleports and Portals", min=20, max=50, why="Your city teleports at 20 and 30 and the group portals at 40 and 50, from each city's portal trainer.", faction="Alliance", spells={3561, 3562, 3565, 10059, 11416, 11419}, ends={}},
@@ -1276,9 +1276,9 @@ ns.CLASS_DATA = {
     default = "affliction", summary = "Level as Affliction (instant Corruption, Siphon Life, drains) or Demonology (a tougher Voidwalker, Soul Link) for the fewest deaths. Destruction hits hardest with Conflagrate and Incinerate but needs more rest.",
     specs = {{key="affliction", label="Affliction", names={"affliction"}}, {key="demonology", label="Demonology", names={"demonology"}}, {key="destruction", label="Destruction", names={"destruction"}}},
     weights = {
-      affliction = {sta=0.8, int=0.75, spi=0.6, sp=1, spShadow=1, spFire=0.2, spellHit=9, spellCrit=3, mp5=1, rdps=2, armor=0.005, health=0.08, mana=0.05},
-      demonology = {sta=1, int=0.75, spi=0.55, sp=0.85, spShadow=0.85, spFire=0.2, spellHit=8, spellCrit=3, mp5=1, rdps=2, armor=0.005, health=0.1, mana=0.05},
-      destruction = {sta=0.7, int=0.85, spi=0.4, sp=1, spShadow=0.8, spFire=0.6, spellHit=9, spellCrit=7, mp5=1, rdps=2, armor=0.005, health=0.07, mana=0.05},
+      affliction = {sta=0.8, int=0.75, spi=0.6, sp=1, spShadow=1, spFire=0.2, spellHit=9, spellCrit=3, mp5=1, rdps=2, armor=0.005, health=0.08, mana=0.05, haste=4},
+      demonology = {sta=1, int=0.75, spi=0.55, sp=0.85, spShadow=0.85, spFire=0.2, spellHit=8, spellCrit=3, mp5=1, rdps=2, armor=0.005, health=0.1, mana=0.05, haste=4},
+      destruction = {sta=0.7, int=0.85, spi=0.4, sp=1, spShadow=0.8, spFire=0.6, spellHit=9, spellCrit=7, mp5=1, rdps=2, armor=0.005, health=0.07, mana=0.05, haste=5.6},
     },
     quests = {
       {id="imp", title="Imp", min=1, max=4, why="Your first demon at level 1-4: the imp, from your start zone's warlock trainer.", faction="Alliance", spells={688}, ends={{q=1599, races={"gnome"}}, {q=1598, races={"human"}}}},
@@ -1291,7 +1291,7 @@ ns.CLASS_DATA = {
       {id="dread-mage-hat", title="Dread Mage Hat", min=25, max=30, why="A cloth hat in your late 20s: Zardeth's errand for any Alliance player pays warlocks this extra.", faction="Alliance", races={"human", "gnome"}, ends={{q=397}}},
       {id="felhunter", title="Felhunter", min=30, max=33, why="The felhunter, the demon to bring against spellcasters, and a Box of Souls for your shards.", faction="Alliance", spells={691}, gear=true, ends={{q=1795}}},
       {id="felhunter", title="Felhunter", min=30, max=33, why="The felhunter, the demon to bring against spellcasters, and a Box of Souls for your shards.", faction="Horde", spells={691}, gear=true, ends={{q=1795}, {q=3001, races={"scourge"}}, {q=2996, races={"orc", "troll"}}}},
-      {id="enchanted-gold-bloodrobe", title="Enchanted Gold Bloodrobe", min=31, max=38, why="A rare cloth robe for your 30s from Menara Voidrender; its last parts wait for levels 35 and 37.", ends={{q=4786}, {q=4739, races={"scourge"}}, {q=4737, races={"orc", "troll"}}, {q=4736, races={"gnome"}}, {q=4738, races={"human"}}}},
+      {id="enchanted-gold-bloodrobe", title="Enchanted Gold Bloodrobe", min=31, max=38, why="A rare cloth robe for your 30s from Menara Voidrender; its last parts wait for levels 37 and 39.", ends={{q=4786}, {q=4739, races={"scourge"}}, {q=4737, races={"orc", "troll"}}, {q=4736, races={"gnome"}}, {q=4738, races={"human"}}}},
       {id="orb-of-orahil", title="Orb of Orahil", min=35, max=40, why="An off-hand orb or a staff for your late 30s, down the felhound's or the infernal's path, your pick.", ends={{q=4975}, {q=4969, races={"scourge"}}, {q=4967, races={"orc", "troll"}}, {q=4965, races={"gnome"}}, {q=4968, races={"human"}}}},
       {id="impsys-request", title="An Imp's Request", min=50, max=54, why="A staff, off-hand or robe for your 50s; Impsy's own errand, not a step of the Dreadsteed chain.", ends={{q=8422}}},
       {id="shard-of-the-green-flame", title="Shard of the Green Flame", min=50, max=56, why="A rare off-hand for your 50s from Niby and Impsy in Felwood, the camp that also offers An Imp's Request.", ends={{q=7603}}},
@@ -1463,9 +1463,9 @@ ns.CLASS_DATA = {
     default = "feral", summary = "Level as Feral Combat: Cat Form for quick kills, Bear Form for tough pulls, and no drinking. Balance kills from range with roots and Starfire; Restoration heals any dungeon and quests slowly with Wrath.",
     specs = {{key="balance", label="Balance", names={"balance"}}, {key="feral", label="Feral", names={"feral", "feralcombat"}}, {key="restoration", label="Restoration (healer)", names={"restoration"}}},
     weights = {
-      balance = {int=1, sp=0.9, spNature=0.9, spArcane=0.7, spellCrit=6, spellHit=8, spi=0.5, sta=0.5, mp5=2, heal=0.1, armor=0.005, mana=0.06, health=0.05},
-      feral = {str=1, agi=1, ap=0.5, crit=9, hit=9, sta=0.65, armor=0.04, defense=0.4, dodge=6, int=0.2, spi=0.15, hp5=0.5, health=0.07},
-      restoration = {int=1, heal=0.7, spi=0.65, mp5=2.2, sta=0.45, spellCrit=4, sp=0.1, armor=0.005, mana=0.06, health=0.05},
+      balance = {int=1, sp=0.9, spNature=0.9, spArcane=0.7, spellCrit=6, spellHit=8, spi=0.5, sta=0.5, mp5=2, heal=0.1, armor=0.005, mana=0.06, health=0.05, haste=4.8},
+      feral = {str=1, agi=1, ap=0.5, crit=9, hit=9, sta=0.65, armor=0.04, defense=0.4, dodge=6, int=0.2, spi=0.15, hp5=0.5, health=0.07, haste=5.4, expertise=8.1, armorPen=2.7},
+      restoration = {int=1, heal=0.7, spi=0.65, mp5=2.2, sta=0.45, spellCrit=4, sp=0.1, armor=0.005, mana=0.06, health=0.05, haste=2.4},
     },
     quests = {
       {id="bear-form", title="Bear Form and Moonglade", min=10, max=12, why="Your tanking form: Forever no longer trains Bear Form, these quests give it. Opens Moonglade too.", spells={5487}, ends={{q=94914}, {q=94912, races={"skyborne"}}, {q=6002, races={"tauren"}}, {q=6001, races={"nightelf"}}}},

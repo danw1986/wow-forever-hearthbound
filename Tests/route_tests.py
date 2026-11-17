@@ -173,7 +173,8 @@ check("a stuck picked note is let go: back on your place", j < note and st.force
 
 # 6b. walking into a zone whose only part left is well above you (Azshara at 29: the
 # level 56 sealed crates and the rest of its 50s part): the guide stays put
-HIGH_SEC = "Azshara & The Barrens (56-56)"
+SECTIONS = re.findall(r'section="([^"]*)"', open(ADDON + "GuideData.lua", encoding="utf-8").read())
+HIGH_SEC = next(s for s in SECTIONS if s.startswith("Azshara & The Barrens ("))  # (the 55-56 crates part)
 
 
 def azshara_at_29(mark_high=False):
@@ -267,19 +268,20 @@ def find(lst, **want):
 
 # a top-up to a part-way level
 L, W, ns, lst = playing(level=29)
-k = find(lst, t="N", lvlBelow=29.49)
-check("the route has a top-up to level 29.49", k is not None)
-W.xp = 400
-check("at level 29.4 the top-up applies", k is not None and ns._dbg.whenHolds(lst[k]))
-W.xp = 600
-check("at level 29.6 it doesn't, and passes by itself", k is not None and not ns._dbg.whenHolds(lst[k]) and ns._dbg.passed(k))
+k = next((n for n in range(1, len(lst) + 1) if lst[n].t == "N" and lst[n].lvlBelow and lst[n].lvlBelow >= 20), None)
+check("the route has a top-up to a level", k is not None)
+top = lst[k].lvlBelow if k else 0
+W.level, W.xp = int(top - 0.1), int(round(((top - 0.1) % 1) * 1000))
+check("just short of it: the top-up applies", k is not None and ns._dbg.whenHolds(lst[k]), (top, W.level, W.xp))
+W.level, W.xp = int(top + 0.1), int(round(((top + 0.1) % 1) * 1000))
+check("just past it: it doesn't, and passes by itself", k is not None and not ns._dbg.whenHolds(lst[k]) and ns._dbg.passed(k))
 
 # the way past a group quest: only if you skipped the quest
 L, W, ns, lst = playing(level=42)
-k = find(lst, t="N", solo=208)
-check("the route has a way past the group quest 208", k is not None)
+k = next((n for n in range(1, len(lst) + 1) if lst[n].solo), None)
+check("the route has a way past a group quest", k is not None)
 check("you skipped it, short of the level: grind", ns._dbg.whenHolds(lst[k]))
-turnin(W, 208)
+turnin(W, lst[k].solo)
 W.tick()
 check("you did it: no need", not ns._dbg.whenHolds(lst[k]) and ns._dbg.passed(k))
 
@@ -298,26 +300,26 @@ inns = [route[k] for k in range(1, len(route) + 1) if route[k].t == "SH"]
 check("every set-hearth step on the route knows where its inn is", inns and all(s.x and s.y and s.z for s in inns),
       [s.text for s in inns if not s.x])
 L, W, ns, lst = playing(level=14)
-k = find(lst, t="SH", text="Ratchet")
+k = find(lst, t="SH", text="The Crossroads")
 inn = ns._dbg.target(lst[k])
 near = L.table_from({"continent": inn.continent, "wx": inn.wx + 60, "wy": inn.wy})  # 60 yards from the inn
-W.bind, W.items = "Ratchet", L.table_from({6948: 1})
+W.bind, W.items = "The Crossroads", L.table_from({6948: 1})
 W.pos = L.table_from({1: 20, 2: 80})  # far across the Barrens: about 3,500 yards
 hint = ns._dbg.hearthHint(near)
-check("far away, bound near the step: hearth", hint is not None and "Hearth to Ratchet:|r saves about" in hint, hint)
+check("far away, bound near the step: hearth", hint is not None and "Hearth to The Crossroads:|r saves about" in hint, hint)
 check("...and says it's ready", hint is not None and "(ready)" in hint, hint)
-check("...the step card says so too", "Hearth to Ratchet" in (ns._dbg.details(lst[k]) or ""), ns._dbg.details(lst[k]))
+check("...the step card says so too", "Hearth to The Crossroads" in (ns._dbg.details(lst[k]) or ""), ns._dbg.details(lst[k]))
 check("...under the arrow, without the '(ready)'", "(ready)" not in (ns._dbg.hearthHint(near, True) or "(ready)"))
-W.pos = L.table_from({1: 58, 2: 36})  # in Ratchet's corner of the Barrens
+W.pos = L.table_from({1: 52, 2: 31})  # at the Crossroads
 check("close by: no hint", ns._dbg.hearthHint(near) is None)
-W.pos = L.table_from({1: 75, 2: 20})  # north-east of Ratchet, bound at Camp Taurajo: farther from it than you are
+W.pos = L.table_from({1: 62, 2: 36})  # east of the Crossroads, bound at Camp Taurajo: farther from it than you are
 W.bind = "Camp Taurajo"
 farther = ns._dbg.hearthHint(near)
 check("bound somewhere farther from the step than you are: no hint", farther is None, farther)
 W.pos = L.table_from({1: 20, 2: 80})
 W.bind = "Nowhere"
 check("bound somewhere the route has no inn: no hint", ns._dbg.hearthHint(near) is None)
-W.bind = "Ratchet"
+W.bind = "The Crossroads"
 W.items = L.table_from({})
 check("no hearthstone in your bags: no hint", ns._dbg.hearthHint(near) is None)
 W.items = L.table_from({6948: 1})
@@ -411,6 +413,26 @@ check("...yes with it", holds(skill="Leatherworking"))
 check("!knows: yes while you don't know the recipe", holds(notKnown=1229432))
 W.spells = L.table_from({1229432: True})
 check("...not once you do", not holds(notKnown=1229432))
+W.zone = "Riverglades"
+check("!zone: not there", not holds(notInZone="Riverglades"))
+W.zone = "Badlands"
+check("...yes elsewhere", holds(notInZone="Riverglades"))
+# a flight path: on a flight map you've opened, or one the route had you get; never opened one: you have it
+ns.cdb.flightsKnown = None
+check("taxi, never opened a flight map: taken as known", holds(taxi="Kargath") and not holds(notTaxi="Kargath"))
+ns.cdb.flightsKnown = L.table_from({"Orgrimmar, Durotar": True})
+check("taxi, not on your flight map: the other way", not holds(taxi="Kargath") and holds(notTaxi="Kargath"))
+ns.cdb.flightsKnown = L.table_from({"Orgrimmar, Durotar": True, "Kargath, Badlands": True})
+check("...on it: this way", holds(taxi="Kargath") and not holds(notTaxi="Kargath"))
+ns.cdb.flightsKnown = L.table_from({"Orgrimmar, Durotar": True})
+fp = next((n for n in range(1, len(lst) + 1) if lst[n].t == "FP" and "Kargath" in (lst[n].text or "")), None)
+ns._dbg.state().done[lst[fp].i] = True
+check("...or the route's step for it done", fp is not None and holds(taxi="Kargath"))
+ns.cdb.flightsKnown = None
+# the new zones are on the route, each in its own section
+secs = [s_ for s_ in SECTIONS]
+check("the Riverglades are on the route", any(s_.startswith("Riverglades (") for s_ in secs))
+check("...and Shen'dralas", any(s_.startswith("Shen'dralas (") for s_ in secs))
 # Camping 101's profession quests: only with that profession, and only while you don't know its camp recipe
 L, W, ns, lst = playing(race="Orc", raceId=2, level=5)
 L.execute("HARNESS_G.IsPlayerSpell = function() return false end HARNESS_G.IsSpellKnown = function() return false end HARNESS_G.C_SpellBook = { IsSpellKnown = function() return false end }")
@@ -532,7 +554,7 @@ check("...and on the card's goal line", "NEW" in ns._dbg.goalLine(fresh_q), ns._
 check("a Classic quest: no NEW in either", "NEW" not in ns2.GuideStepTitle(old_q) and "NEW" not in ns2._dbg.goalLine(old_q),
       (ns2.GuideStepTitle(old_q), ns2._dbg.goalLine(old_q)))
 groups = {g.name: g for g in ns.GuideSectionGroups(True).values()}
-zeph = groups.get("Zephras Isle (1-14)")
+zeph = next((g for n_, g in groups.items() if n_.startswith("Zephras Isle (")), None)
 check("the zone overview counts Zephras Isle's new quests", zeph and 0 < zeph.newQuests <= zeph.quests, zeph and (zeph.newQuests, zeph.quests))
 groups2 = {g.name: g for g in ns2.GuideSectionGroups(True).values()}
 dur = groups2.get("Durotar (1-12)")
@@ -557,11 +579,11 @@ check("clicking Accept Egg Hunt marks Korran, not a nearby detour", got == ("Egg
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)
 check("no deathskips: they're opt-in upstream, and never on Hardcore", "Deathskip" not in data)
-check("the route says which upstream it's adapted from, and its licence", "polestar v0.3.7.2 (guides/forever), GPL-3.0-only" in data)
+check("the route says which upstream it's adapted from, and its licence", "polestar v0.4.0.1 (guides/forever), GPL-3.0-only" in data)
 # Mulgore is one of the maps Forever redrew: typed in Era's frame, converted to Forever's
 check("a typed Mulgore point lands where it is on Forever's map", 'text="The Venture Co. Mine", z=215, x=61.19, y=49.31' in data)
 # every start goes on to Silverpine Forest (the route's shared part starts there since 0.3.5)
-want = "Silverpine Forest (12-15)"
+want = next(s for s in SECTIONS if s.startswith("Silverpine Forest (12-"))
 for race, rid, start in (("Orc", 2, "Durotar"), ("Troll", 8, "Durotar"), ("Tauren", 6, "Mulgore"),
                          ("Scourge", 5, "Tirisfal Glades"), ("Skyborne", 96, "Zephras Isle")):
     L, W, ns, lst = playing(race=race, raceId=rid)

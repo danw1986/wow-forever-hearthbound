@@ -38,6 +38,7 @@ ZONE_ID.update({  # the ones the old routes never named
     "Felwood": 361, "Feralas": 357, "Moonglade": 493, "Mulgore": 215, "Orgrimmar": 1637, "Silithus": 1377,
     "Stonetalon Mountains": 406, "Tanaris": 440, "Teldrassil": 141, "The Barrens": 17, "Thousand Needles": 400,
     "Thunder Bluff": 1638, "Un'Goro Crater": 490, "Winterspring": 618, "Zephras Isle": 16593,
+    "Riverglades": 16591, "Shen'dralas": 16651,
 })
 ZONE_NAME = {v: k for k, v in ZONE_ID.items()}
 # uiMap IDs (for "zone map <id>" / "map <id>") -> AreaTable, from Guide.lua's ZONE_MAPS
@@ -193,6 +194,7 @@ def parse(path):
                 g["steps"].append(step)
             else:
                 g[key] = rest.strip()
+                g.setdefault(key + "_all", []).append(rest.strip())  # (next and levels can repeat, one per faction)
             continue
         toks = tokens(body.strip())
         verb = toks[0][1].lower()
@@ -345,10 +347,22 @@ def when_fields(lines, guide_id):
             out["skill"] = arg  # only with this profession (Camping 101's profession quests)
         elif word == "!knows" and arg.isdigit():
             out["notKnown"] = int(arg)  # only while you don't know this spell or recipe
-        elif word in ("turnedin", "!turnedin", "!onquest", "available") and arg.isdigit():
+        elif word in ("turnedin", "!turnedin", "!onquest", "available") and re.fullmatch(r"[\d,]+", "".join(t[1] for t in toks[1:])):
             key = {"turnedin": "turnedIn", "!turnedin": "notTurnedIn", "!onquest": "notOnQuest",
                    "available": "available"}[word]
-            out.setdefault(key, []).append(int(arg))  # every one of them
+            for q in "".join(t[1] for t in toks[1:]).split(","):
+                if q:
+                    out.setdefault(key, []).append(int(q))  # every one of them
+        elif word == "taxi" and arg:
+            out["taxi"] = arg  # only with this flight path
+        elif word == "!taxi" and arg:
+            out["notTaxi"] = arg  # only without it
+        elif word == "done":
+            out["_skip"] = True  # after one of the upstream's side guides (a riding trip): not ours
+        elif word == "!done":
+            pass  # the way for those who didn't: everyone here
+        elif word == "!zone" and arg:
+            out["notInZone"] = arg
         elif word == "!complete" and arg.isdigit():
             out["notReady"] = int(arg)  # the quest isn't ready to hand in (not in your log, or not done)
         elif word == "has" and arg.isdigit():
@@ -385,7 +399,7 @@ def lua(v):
 
 
 FIELD_ORDER = ["t", "q", "obj", "name", "text", "gv", "gw", "optional", "group", "foreverOnly", "z", "x", "y", "target",
-               "note", "tip", "races", "classes", "lvlBelow", "lvlMin", "moneyMin", "noSkill", "skill", "notKnown", "turnedIn", "notTurnedIn", "notOnQuest", "notReady", "available", "hasAtLeast", "inZone", "direct", "bound", "notBound", "onQuest", "solo",
+               "note", "tip", "races", "classes", "lvlBelow", "lvlMin", "moneyMin", "noSkill", "skill", "notKnown", "turnedIn", "notTurnedIn", "notOnQuest", "notReady", "available", "hasAtLeast", "inZone", "notInZone", "taxi", "notTaxi", "direct", "bound", "notBound", "onQuest", "solo",
                "ready", "hasBelow", "section", "zoneName", "p", "place", "was"]
 PLACE_ID = [0]  # each upstream step: one place, its goals shown together
 
@@ -396,7 +410,7 @@ def step_line(s):
 
 
 def convert(guide, place, out):
-    section = f"{guide.get('title', '?')} ({guide.get('levels', '?')})"
+    section = f"{guide.get('title', '?')} ({horde_levels(guide)})"
     base_races = [RACES[r.strip().lower()] for r in guide.get("race", "").split(",") if r.strip()] or None
     zone_name = guide.get("zone", "")
     place.zone = ZONE_ID.get(zone_name)
@@ -614,7 +628,7 @@ def convert(guide, place, out):
                 # travel, training, notes
                 label = mods["quoted"][0] if mods["quoted"] else None
                 s = dict(base)
-                if verb == "goto":
+                if verb in ("goto", "enter"):  # (enter: into a zone, at the spot given)
                     s.update(t="G", text=label or note or st["title"])
                     if pos and "," in pos:
                         x, y = pos.split(",")
@@ -694,11 +708,26 @@ def convert(guide, place, out):
 # ------------------------------------------------------------------ the chain: each race's start, then the rest
 load_open_db(os.path.join(SRC, "..", ".."))
 guides = {}
-for root, _, files in os.walk(os.path.join(SRC, "horde")):
+for root, _, files in os.walk(SRC):
     for f in files:
         if f.endswith(".guide"):
             g = parse(os.path.join(root, f))
-            guides[g["guide"]] = g
+            if g.get("guide"):
+                guides[g["guide"]] = g
+
+
+def horde_next(g):
+    """a guide's next guide on the Horde route: a shared guide names one per faction"""
+    nexts = [n.strip() for line in g.get("next_all", []) for n in line.split(",") if n.strip()]
+    return next((n for n in nexts if n.startswith("forever/horde/")), None)         or next((n for n in nexts if not n.startswith("forever/alliance/")), None)
+
+
+def horde_levels(g):
+    """the guide's level range for the Horde ("levels 46-47 Horde"; a plain one for everyone)"""
+    lv = g.get("levels_all") or [g.get("levels", "?")]
+    tagged = [l.rsplit(" ", 1)[0] for l in lv if l.endswith(" Horde")]
+    plain = [l for l in lv if not l.endswith((" Horde", " Alliance"))]
+    return (tagged or plain or lv)[0]
 starts = ["forever/horde/skyborne/01-zephras-isle", "forever/horde/orc/01-durotar", "forever/horde/troll/01-durotar",
           "forever/horde/tauren/01-mulgore", "forever/horde/undead/01-tirisfal-glades"]
 def follow(gid):
@@ -706,7 +735,7 @@ def follow(gid):
     out = []
     while gid and gid in guides and gid not in out:
         out.append(gid)
-        gid = (guides[gid].get("next") or "").split(",")[0].strip() or None
+        gid = horde_next(guides[gid])
     return out
 
 
@@ -719,7 +748,7 @@ for c in chains:
     order += [g for g in c[:c.index(shared)] if g not in order]
 order += chains[0][chains[0].index(shared):]
 seen = set(order)
-missing = [g for g in guides if g not in seen]
+missing = [g for g in guides if g not in seen and g.startswith("forever/horde/")]
 if missing:
     warnings.append(f"guides not in the chain: {missing}")
 
@@ -872,7 +901,8 @@ if WRITE:
         fh.write("-- ready = Q: Q is in your log ready to hand in; hasBelow = {item, N}: fewer than N in your bags;\n")
         fh.write("-- hasAtLeast = {item, N}: N or more; turnedIn/notTurnedIn = {Q...}: all handed in / none;\n")
         fh.write("-- notOnQuest = {Q...}: none in your log; notReady = Q: Q isn't ready to hand in;\n")
-        fh.write("-- available = {Q...}: each can be taken now; inZone = the zone you're in.\n")
+        fh.write("-- available = {Q...}: each can be taken now; inZone/notInZone = the zone you're in / not in;\n")
+        fh.write("-- taxi/notTaxi = a flight path you know / don't know.\n")
         fh.write("-- direct = true: a hand-in straight from the giver's window (the quest is never in your log).\n")
         fh.write("-- was = N: the step's number in the route this one replaced (your place moves over).\n")
         fh.write("local _, ns = ...\nns.HordeGuides = ns.HordeGuides or {}\nns.HordeGuides.horde = {\n")

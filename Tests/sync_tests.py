@@ -6,6 +6,7 @@
 # different route versions meet on the same quest, and turning sync off or
 # leaving the party forgets each other.  Run: python Tests/sync_tests.py
 import os
+import re
 import sys
 from lupa import LuaRuntime
 
@@ -112,7 +113,8 @@ lead = Player("Leadra", "Orc", 2, 14, {"player": "Leadra", "party1": "Memba"}, {
 mem = Player("Memba", "Troll", 8, 14, {"player": "Memba", "party1": "Leadra"}, {"party1": True})
 party = [lead, mem]
 
-SILVERPINE = "Silverpine Forest (12-15)"
+SILVERPINE = next(s for s in re.findall(r'section="([^"]*)"', open(ADDON + "GuideData.lua", encoding="utf-8").read())
+                  if s.startswith("Silverpine Forest (12-"))
 j = lead.index_of_section(SILVERPINE, 6)
 check("the leader has the Silverpine section", j is not None)
 lead.ns.GuideSyncGo(j)
