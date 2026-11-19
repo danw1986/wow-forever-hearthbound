@@ -1,6 +1,6 @@
 -- Each class's specs and stat weights, class quest chains and talent plans.
 -- Rebuilt by Tests/class_import.py.
--- Adapted from github.com/fitzforge/polestar v0.4.0.1, GPL-3.0-only.
+-- Adapted from github.com/fitzforge/polestar v0.4.1.1, GPL-3.0-only.
 -- weights: per spec, one point of the main stat is about 1 (dps = melee weapon DPS, rdps = ranged).
 -- quests: min/max = levels; ends = the hand-ins that finish it (the first that fits your race);
 -- spells = what it teaches, also a sign it's done; gear = it pays gear too, so finish it anyway.
