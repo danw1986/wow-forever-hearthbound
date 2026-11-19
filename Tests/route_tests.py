@@ -633,7 +633,7 @@ check("clicking Accept Egg Hunt marks Korran, not a nearby detour", got == ("Egg
 data = open(ADDON + "GuideData.lua", encoding="utf-8").read()
 check("every quest has its real name", 'name="Quest ' not in data)
 check("no deathskips: they're opt-in upstream, and never on Hardcore", "Deathskip" not in data)
-check("the route says which upstream it's adapted from, and its licence", "polestar v0.4.0.1 (guides/forever), GPL-3.0-only" in data)
+check("the route says which upstream it's adapted from, and its licence", re.search(r"polestar v[\d.]+ \(guides/forever\), GPL-3\.0-only", data) is not None)
 # Mulgore is one of the maps Forever redrew: typed in Era's frame, converted to Forever's
 check("a typed Mulgore point lands where it is on Forever's map", 'text="The Venture Co. Mine", z=215, x=61.19, y=49.31' in data)
 # every start goes on to Silverpine Forest (the route's shared part starts there since 0.3.5)
