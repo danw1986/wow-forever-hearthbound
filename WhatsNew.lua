@@ -14,6 +14,8 @@ ns.WHATS_NEW = {
         { "Rares in your quest targets",
           "A rare or rare elite enemy near you - one the game puts on your minimap, or whose nameplate, target or mouseover says it's rare - now goes to the top of the quest targets window, with the skull marker. Click it to target and mark it. Rares on your side and faction leaders are left out.",
           settings = "quests" },
+        { "Where a dungeon quest's chain starts",
+          "In the dungeon journal, a quest that needs others first now lists the whole chain before it: each quest in order, who gives it and where, the ones you've done ticked and the one to do next marked, with any optional lead-in first. Pick up first sends you to the start of the chain for a quest you can't take yet, and quests whose giver isn't known are listed too." },
         { "Route fixes",
           "A round of small fixes to the levelling route: hand-ins wait until the work is done and send you to the right spot, and a few quests are done on fewer trips." },
     } },

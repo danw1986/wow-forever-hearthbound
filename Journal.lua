@@ -211,6 +211,62 @@ local function MapName(mapID)
     return info and info.name or nil
 end
 
+-- The quests before this one (QuestieDB), as lines for its entry: who gives
+-- each and where, the ones you've done ticked, the one to do next marked, and
+-- optional lead-ins first. nil: nothing to say (no QuestieDB, or nothing
+-- before it); {}: all done before it.
+local CHAIN_SHOWN = 8
+local function ChainLines(q)
+    local chain = q.id and ns.QuestieChain and ns.QuestieChain(q.id)
+    if not chain or #chain == 0 then return nil end
+    local left = 0
+    for _, c in ipairs(chain) do if not c.done and not c.lead then left = left + 1 end end
+    if left == 0 then return {} end
+    local inLog = {}
+    for _, e in ipairs(ns.openQuests or {}) do inLog[e.id] = true end
+    local out = { format("|cffff8844Do first: %d quest%s before this one|r", left, left == 1 and "" or "s") }
+    -- a long chain you're part-way through: the finished start in one line, so
+    -- the step to do next is always in sight
+    local from = 1
+    while from <= #chain and (chain[from].done or chain[from].lead) do from = from + 1 end
+    if from > 3 then
+        out[#out + 1] = format("|cff6fdc6f   1-%d. done|r |cff999999(%s ... %s)|r", from - 1, chain[1].title, chain[from - 1].title)
+    else
+        from = 1
+    end
+    local nextFound = false
+    for i = from, #chain do
+        local c = chain[i]
+        if i >= from + CHAIN_SHOWN then
+            out[#out + 1] = format("|cff999999   ...and %d more|r", #chain - i + 1)
+            break
+        end
+        local where
+        if c.start and c.start.giver then
+            local zone = MapName(c.start.mapID)
+            where = c.start.giver .. (zone and (" - " .. zone) or "")
+        elseif c.startItem then
+            where = "starts from " .. c.startItem
+        else
+            where = "giver not known"
+        end
+        local mark, colour = nil, "c0c0c0"
+        if c.done then
+            mark, colour = "done", "6fdc6f"
+        elseif inLog[c.id] then
+            mark, colour, nextFound = "in your log", "ffd200", true
+        elseif c.lead then
+            colour = "a0a0a0" -- (a lead-in only points you to the next one: not where you have to start)
+        elseif not nextFound then
+            mark, colour, nextFound = "start here", "ffd200", true
+        end
+        out[#out + 1] = format("|cff%s   %d. %s%s|r |cff999999- %s|r%s", colour, i, c.title,
+            c.lead and " (lead-in, optional)" or "", where, mark and format("  |cff%s%s|r", colour, mark) or "")
+    end
+    return out
+end
+ns.JournalChainLines = ChainLines -- (for the tests)
+
 local function FindOpenQuest(questID)
     for _, q in ipairs(ns.openQuests or {}) do
         if q.id == questID then return q end
@@ -942,7 +998,11 @@ local function QuestSpec(q, dungeonKey)
             if name then needs[#needs + 1] = name end
         end
     end
-    if #needs > 0 and not status then
+    -- the whole chain before it, when QuestieDB has it; else what it needs right before
+    local chain = not status and ChainLines(q)
+    if chain then
+        for _, l in ipairs(chain) do lines[#lines + 1] = l end
+    elseif #needs > 0 and not status then
         lines[#lines + 1] = "|cffff8844Do first: " .. table.concat(needs, ", ") .. "|r"
         -- the quest before can be the end of a chain: where the part you can take now is
         local startId = q.id and ns.QuestieChainStart and ns.QuestieChainStart(q.id)
@@ -1223,6 +1283,8 @@ end
 -- log, and (when Questie knows the quest) ones you're allowed to take now
 local function PickupList(d)
     local list = {}
+    local inLog, chainSeen = {}, {}
+    for _, e in ipairs(ns.openQuests or {}) do inLog[e.id] = true end
     for _, q in ipairs((QuestsFor(d))) do
         if not q.inside and not QuestStatus(q.title) then
             local id = q.questieId
@@ -1235,6 +1297,24 @@ local function PickupList(d)
             if doable then
                 local spec = QuestSpec(q, d.key)
                 list[#list + 1] = { q = q, spec = spec, yards = YardsTo(spec.spot) }
+            elseif id and ns.QuestieChain then
+                -- not yet: the first quest of its chain still to take, if you can take it now
+                for _, c in ipairs(ns.QuestieChain(id) or {}) do
+                    if not c.done and not inLog[c.id] and not c.lead then
+                        local open = not ns.QuestieIsDoable or ns.QuestieIsDoable(c.id) ~= false
+                        if open and not chainSeen[c.id] and c.start then
+                            chainSeen[c.id] = true
+                            local spot = c.start.mapID and { mapID = c.start.mapID, x = c.start.x, y = c.start.y } or nil
+                            local zone = MapName(c.start.mapID)
+                            local who = (c.start.giver or "?") .. (zone and (" - " .. zone) or "")
+                                .. "  |cffff8844starts the chain for " .. q.title .. "|r"
+                            local onMark = spot and function() ns.SetWaypoint(spot.mapID, spot.x, spot.y, c.title) end
+                            list[#list + 1] = { q = { title = c.title, level = c.level }, spec = { who = who, spot = spot, onMark = onMark },
+                                                yards = YardsTo(spot) }
+                        end
+                        break
+                    end
+                end
             end
         end
     end

@@ -426,6 +426,65 @@ text = qtext
 check("...a quest with something to do first says so", "Do first: Hamuul Runetotem" in text, text[:600])
 check("...and where the chain starts, when it's longer", "Start with Hamuul's Errand, from Arch Druid Hamuul" in text and "78.6, 28.6" in text,
       text[text.find("Do first"):text.find("Do first") + 200])
+# with QuestieDB's whole chain: every quest before it, who gives it and where,
+# done ones ticked, the one to do next marked, an optional lead-in first
+page_text = J.eval("""function(ns, tab)
+    ns.ClearJournalQuestCache()
+    ns.ShowDungeon("wc")
+    MOCK.RunTimers()
+    for _, item in ipairs(ns.JournalMenu()) do
+        if item.label == tab and item.onClick then item.onClick() end
+    end
+    MOCK.RunTimers()
+    local texts = {}
+    for _, o in ipairs(MOCK.frames) do
+        if o:IsVisible() ~= false and type(o._text) == "string" then texts[#texts + 1] = o._text end
+    end
+    return table.concat(texts, " | ")
+end""")
+J.eval("""function(ns)
+    local function at(giver, mapID, x, y) return { giver = giver, mapID = mapID, x = x, y = y } end
+    ns.QuestieChain = function(id)
+        if id == 1490 then
+            return {
+                { id = 900, title = "The Barrens Oases", lead = true, start = at("Hamuul", 1456, 78, 28) },
+                { id = 1488, title = "Hamuul's Errand", done = true, start = at("Arch Druid Hamuul", 1456, 78.6, 28.6) },
+                { id = 1489, title = "Hamuul Runetotem", start = at("Tonga Runetotem", 1413, 52.3, 31.9) },
+            }
+        end
+        if id == 1486 then -- a long chain you're part-way through
+            local c = {}
+            for n = 1, 12 do c[n] = { id = 3000 + n, title = "Step " .. n, done = n <= 7, start = at("Someone", 1413, 50, 50) } end
+            return c
+        end
+        return {}
+    end
+end""")(jns)
+text = page_text(jns, "Quests")
+at = text.find("Do first: 1 quest before this one")
+nara = text[at:at + 700] if at >= 0 else ""
+check("a quest with a chain before it lists the whole chain", "Do first: 1 quest before this one" in nara and "Hamuul's Errand" in nara
+      and "Hamuul Runetotem" in nara, nara)
+check("...the done one ticked, the next one marked", "Hamuul's Errand|r |cff999999- Arch Druid Hamuul" in nara and "done" in nara
+      and "start here" in nara, nara)
+check("...a lead-in shown as optional, not where to start", "The Barrens Oases (lead-in, optional)" in nara
+      and nara.find("start here") > nara.find("Hamuul Runetotem"), nara)
+hides = text[text.find("Deviate Hides"):][:700] if "Deviate Hides" in text else ""
+check("a long chain part-way through folds its done start into one line", "1-7. done" in hides and "Step 8" in hides
+      and "Step 2|r" not in hides, hides)
+# not yet takeable: Pick up first sends you to where its chain starts
+J.eval("""function(ns)
+    ns.QuestieIsDoable = function(id) return id ~= 1490 end
+    ns.QuestieChain = function(id)
+        if id == 1490 then
+            return { { id = 1489, title = "Hamuul Runetotem", start = { giver = "Tonga Runetotem", mapID = 1413, x = 52.3, y = 31.9 } } }
+        end
+        return {}
+    end
+end""")(jns)
+text = page_text(jns, "Overview")
+check("a quest you can't take yet: Pick up first lists where its chain starts",
+      "Hamuul Runetotem" in text and "starts the chain for Nara Wildmane" in text, text[:800])
 errs = [str(e)[:200] for e in list(J.globals().MOCK.errors.values())]
 check("...with no errors", not errs, errs[:3])
 

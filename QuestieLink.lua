@@ -19,6 +19,7 @@ local giversById = {} -- questId -> giver entry
 local itemUses = {}   -- itemId -> quest IDs that need it
 local itemStarts = {} -- itemId -> quest ID it starts
 local nextOf = {}     -- questId -> quests that need it done first (the chain onwards)
+local leadsTo = {}    -- questId -> lead-in quests for it ("go and see" quests that point you there)
 local areaQuests = {} -- zone area ID -> quest IDs filed under it (not dungeons)
 local giversByTitle = {} -- normalised title -> giver entry, for loose name matching
 local scanWaiters = {}
@@ -452,7 +453,14 @@ function ScanQuests(onDone)
             if not itemStarts[itemId] then itemStarts[itemId] = id end
         end
 
-        if key and (starter or fromItem) then
+        -- a lead-in ("go and see someone") for another quest
+        local crumb = Get("Quest", id, "breadcrumbForQuestId")
+        if type(crumb) == "number" and crumb > 0 then
+            leadsTo[crumb] = leadsTo[crumb] or {}
+            table.insert(leadsTo[crumb], id)
+        end
+        -- (one QuestieDB has no giver for still belongs to the dungeon: "giver not known")
+        if key and (starter or fromItem or startedBy == nil) then
             byDungeon[key] = byDungeon[key] or {}
             table.insert(byDungeon[key], { title = title, level = level, questieId = id })
         end
@@ -496,6 +504,7 @@ function ScanQuests(onDone)
             wipe(itemUses)
             wipe(itemStarts)
             wipe(nextOf)
+            wipe(leadsTo)
             wipe(areaQuests)
             C_Timer.After(10, function()
                 if scanWaiters[1] then ScanQuests(table.remove(scanWaiters, 1)) end
@@ -963,6 +972,51 @@ function ns.QuestieChainsCompleted(minLength)
         end
     end
     return count
+end
+
+-- Every quest before this one, in the order you'd do them - what it needs
+-- first, and what that needs, back to the start - then optional lead-ins at
+-- the front: { id, title, level, start = { giver, mapID, x, y }, startItem,
+-- done, lead }. Of quests where any one will do, the one you've done, else the
+-- first that's for you. nil without QuestieDB; {} when nothing comes first.
+function ns.QuestieChain(questId)
+    if not (questId and Lib()) then return nil end
+    local out, seen = {}, {}
+    local function ForYou(id) return not ns.QuestieFitsYou or ns.QuestieFitsYou(id) ~= false end
+    local function Add(id, depth)
+        if seen[id] or depth > MAX_CHAIN_DEPTH then return end
+        seen[id] = true
+        local info = ns.QuestieQuestInfo(id)
+        if not info then return end
+        for _, p in ipairs(info.preGroup or {}) do Add(p, depth + 1) end
+        local single = info.preSingle or {}
+        if #single > 0 then
+            local pick
+            for _, p in ipairs(single) do if Done(p) then pick = p break end end
+            if not pick then
+                for _, p in ipairs(single) do if ForYou(p) then pick = p break end end
+            end
+            if pick then Add(pick, depth + 1) end
+        end
+        if id ~= questId then
+            out[#out + 1] = { id = id, title = info.title, level = info.level, start = info.start,
+                              startItem = info.startItem, done = Done(id) }
+        end
+    end
+    Add(questId, 0)
+    -- lead-ins into where the chain starts (or the quest itself), unless you're past them
+    local first = out[1] and out[1].id or questId
+    if not (out[1] and out[1].done) and not Done(first) then
+        for _, b in ipairs(leadsTo[first] or {}) do
+            local info = not seen[b] and ForYou(b) and ns.QuestieQuestInfo(b)
+            if info then
+                seen[b] = true
+                table.insert(out, 1, { id = b, title = info.title, level = info.level, start = info.start,
+                                       startItem = info.startItem, done = Done(b), lead = true })
+            end
+        end
+    end
+    return out
 end
 
 function ns.QuestieChainStart(questId)

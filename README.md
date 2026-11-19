@@ -67,8 +67,10 @@ tools into one window, and keeps a record of each character's journey to 60.
 
 **Dungeons**
 - Dungeon journal with every quest for your character: who gives it, where (with
-  a map marker), what to do first, and which start inside. Plus bosses, per-boss
-  loot and a banner picture for each dungeon
+  a map marker), and which start inside. Plus bosses, per-boss loot and a banner
+  picture for each dungeon
+- For a quest that needs others first, the whole chain before it: each quest in
+  order with its giver and zone, the ones you've done ticked and where to start
 
 **Journey and stats**
 - Journey tab: road to 60, milestones reached, deaths and level history
@@ -83,6 +85,7 @@ tools into one window, and keeps a record of each character's journey to 60.
 **Interface**
 - One shell window with a tab rail, menu column and content panel
 - Optional Hearthbound-styled nameplates with threat colours
+- Rares near you at the top of the quest targets window, ready to target and mark
 - Minimap button, welcome-back summary on login, first-time setup wizard
 - A "What's new" window once after each update, with links to new settings (`/hb new`)
 - Settings profiles (export / import as text) and a debug report
