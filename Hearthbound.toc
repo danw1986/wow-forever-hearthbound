@@ -59,6 +59,7 @@ Vendor.lua
 QuestLinks.lua
 QuestPins.lua
 Objectives.lua
+Rares.lua
 QuestTargets.lua
 NamePlates.lua
 GuideData.lua

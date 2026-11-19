@@ -10,6 +10,13 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.11.0", items = {
+        { "Rares in your quest targets",
+          "A rare or rare elite enemy near you - one the game puts on your minimap, or whose nameplate, target or mouseover says it's rare - now goes to the top of the quest targets window, with the skull marker. Click it to target and mark it. Rares on your side and faction leaders are left out.",
+          settings = "quests" },
+        { "Route fixes",
+          "A round of small fixes to the levelling route: hand-ins wait until the work is done and send you to the right spot, and a few quests are done on fewer trips." },
+    } },
     { version = "0.10.2", items = {
         { "The guide only moves when you say",
           "Changing zones no longer moves the guide: it stays on your place. It still remembers where you were in each zone, so Choose a zone, Back to the previous zone and the prompt when you arrive somewhere new pick up there - nothing moves unless you press Switch. Want the old way? Turn Follow the zone I'm in back on.",
