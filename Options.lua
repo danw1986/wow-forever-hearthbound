@@ -471,6 +471,8 @@ local function BuildSettingsPage(page)
     col:Slider("Quest targets within (yards)", "targetsYards", "The quest targets window only lists mobs this close to you, or that you can see.", 100, 1000, 25, "%d")
     col:Check("Quest NPCs in quest targets", "targetsNpcs",
         "The quest targets window also lists NPCs close by that you can pick a quest up from or hand one in to, so you can target and mark them. They drop off once there's nothing left to do with them.")
+    col:Check("Rares in quest targets", "targetsRares",
+        "A rare or rare elite enemy near you - one the game shows on your minimap, or whose nameplate, target or mouseover says it's rare - goes to the top of the quest targets window, quest or not. Click it to target it (and mark it, with raid markers on). Rares on your side, and faction leaders, are left out.")
     col:Check("Raid markers on quest targets", "targetSkull",
         "Clicking a mob in the quest targets window also marks it: skull for the first row, then cross, square, moon, triangle and diamond.")
     col:Check("Don't leave yet alert", "leaveTownAlert",

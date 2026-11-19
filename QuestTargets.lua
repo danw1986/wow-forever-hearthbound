@@ -173,10 +173,24 @@ local function Targets()
             end
         end
     end
+    -- rares near you (Rares.lua), quest or not: they go to the top
+    for _, r in ipairs(ns.RaresNearby and ns.RaresNearby() or {}) do
+        local key = r.name:lower()
+        local t = byName[key]
+        if not t then
+            t = { name = r.name, quests = {}, yards = r.yards, spot = r.spot }
+            byName[key] = t
+            list[#list + 1] = t
+        elseif r.yards and (not t.yards or r.yards < t.yards) then
+            t.yards, t.spot = r.yards, r.spot
+        end
+        t.rare = r
+    end
     local seen = InSight()
-    for _, t in ipairs(list) do t.inSight = seen[t.name:lower()] or false end
+    for _, t in ipairs(list) do t.inSight = seen[t.name:lower()] or (t.rare and t.rare.inSight) or false end
     local function Close(t) return t.interact and t.yards and t.yards <= CLOSE_NPC end
     table.sort(list, function(a, b)
+        if (a.rare ~= nil) ~= (b.rare ~= nil) then return a.rare ~= nil end
         if Close(a) ~= Close(b) then return Close(a) end
         if a.inSight ~= b.inSight then return a.inSight end
         return (a.yards or math.huge) < (b.yards or math.huge)
@@ -185,7 +199,8 @@ local function Targets()
     -- (Mobs with no known position only show once you can see them.)
     local near, limit = {}, NearbyYards()
     for _, t in ipairs(list) do
-        if t.inSight or (t.yards and t.yards <= limit) then near[#near + 1] = t end
+        -- (a rare with no place given is on your minimap, so it's near)
+        if t.inSight or (t.yards and t.yards <= limit) or (t.rare and not t.yards) then near[#near + 1] = t end
     end
     return near, #list
 end
@@ -200,7 +215,14 @@ local function DistanceText(t)
     return format("|cffc0c0c0%.1fk yd|r", t.yards / 1000)
 end
 
+local RARE_COLOUR = "|cff8cc8ff"
+local function RareText(t)
+    if not t.rare then return "" end
+    return " " .. RARE_COLOUR .. (t.rare.class == "rareelite" and "rare elite" or "rare") .. "|r"
+end
+
 local function ProgressText(t)
+    if t.rare and #t.quests == 0 then return RareText(t) end
     if t.interact == "turnin" then return " |cff6fdc6fhand in|r" end
     if t.interact == "pickup" then return " |cffffd200pick up|r" end
     for _, q in ipairs(t.quests) do
@@ -215,6 +237,10 @@ local function ShowRowTooltip(row)
     if not t then return end
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
     GameTooltip:SetText(t.name, 1, 1, 1)
+    if t.rare then
+        GameTooltip:AddLine((t.rare.class == "rareelite" and "Rare elite" or "Rare")
+            .. (t.rare.level and (", level " .. t.rare.level) or "") .. " - near you now", 0.55, 0.78, 1)
+    end
     for _, q in ipairs(t.quests) do
         local p = q.progress
         local count = (p and p.have and p.need) and format(" (%d/%d)", p.have, p.need) or ""
@@ -370,7 +396,7 @@ local function Update()
             end
             row.icon:SetShown(ns.db.targetSkull and true or false)
             row.target = t
-            row.name:SetText(t.name)
+            row.name:SetText(t.rare and (RARE_COLOUR .. t.name .. "|r") or t.name)
             row.info:SetText(ProgressText(t) .. "  " .. DistanceText(t))
             row:Show()
         else

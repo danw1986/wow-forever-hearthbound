@@ -22,6 +22,7 @@ ns.defaults = {
     targetSkull = true,
     targetsYards = 350, -- the quest targets window only lists mobs this close (or in sight)
     targetsNpcs = true, -- ...and NPCs you can pick a quest up from or hand one in to
+    targetsRares = true, -- ...and rare enemies near you, at the top (Rares.lua)
     showObjectives = true,
     showGrind = true,
     autoSell = true,
