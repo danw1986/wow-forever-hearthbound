@@ -161,4 +161,4 @@ images and aren't covered by this licence.
 
 ## Version
 
-0.10.2
+0.11.0
