@@ -164,4 +164,4 @@ under the SIL Open Font License: see [Barlow-OFL.txt](Media/Fonts/Barlow-OFL.txt
 
 ## Version
 
-0.11.0
+0.12.0
