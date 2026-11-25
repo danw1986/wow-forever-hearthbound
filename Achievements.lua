@@ -1012,7 +1012,7 @@ function ns.BuildAchievementsTab(parent)
             scrollBar:SetValue(0) -- start each category at the top
             ns.RefreshAchievements()
         end)
-        b.text:SetFont(ns.FONT, 10, "")
+        ns.SetFont(b.text, 10, "")
         b.key = def.key
         b:SetPoint("TOPLEFT", ns.UI.pad + (i - 1) * (w + 3), -4)
         catButtons[#catButtons + 1] = b

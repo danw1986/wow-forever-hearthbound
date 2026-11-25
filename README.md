@@ -83,6 +83,8 @@ tools into one window, and keeps a record of each character's journey to 60.
 - Alts tab with an account-wide snapshot of every character and total gold
 
 **Interface**
+- Sleek smoked-glass windows with soft shadows, an accent line in your theme's
+  colour and a clean modern font (or the game's own, in Settings)
 - One shell window with a tab rail, menu column and content panel
 - Optional Hearthbound-styled nameplates with threat colours
 - Rares near you at the top of the quest targets window, ready to target and mark
@@ -157,7 +159,8 @@ on the next login. It also picks up any dungeon pictures dropped into
 ## Licence
 
 GPL-3.0: see [LICENSE](LICENSE). The dungeon pictures in `Images/` are third-party
-images and aren't covered by this licence.
+images and aren't covered by this licence. The Barlow font in `Media/Fonts/` is
+under the SIL Open Font License: see [Barlow-OFL.txt](Media/Fonts/Barlow-OFL.txt).
 
 ## Version
 

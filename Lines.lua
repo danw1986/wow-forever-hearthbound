@@ -82,7 +82,7 @@ function ns.CreateLineView(parent, x, width, look)
                 l.a:SetSpacing(look.textSpacing)
                 l.b:SetSpacing(look.textSpacing)
             end
-            l.rule:SetColorTexture(0.78, 0.61, 0.43, 0.25)
+            ns.HeaderRule(l.rule)
             l.rule:SetHeight(1)
             view.pool[i] = l
         end
@@ -164,8 +164,8 @@ function ns.CreateLineView(parent, x, width, look)
         for _, b in ipairs(l.itemButtons or {}) do b:Hide() end
     end
 
-    local function Style(fs, size, color)
-        fs:SetFont(ns.FONT, size, "")
+    local function Style(fs, size, color, bold)
+        ns.SetFont(fs, size, "", bold)
         fs:SetTextColor(unpack(color))
     end
 
@@ -193,7 +193,7 @@ function ns.CreateLineView(parent, x, width, look)
             if line.sectionStart and i > 1 then y = y - SECTION_GAP end
             if line.kind == "header" then
                 y = y - HEADER_ABOVE
-                Style(a, 10, ns.color.gold)
+                Style(a, 10, ns.color.gold, true)
                 a:SetJustifyH("LEFT")
                 a:SetPoint("TOPLEFT", x, y)
                 -- the icon goes on after the capitals: its |t code must stay lower case
@@ -211,7 +211,7 @@ function ns.CreateLineView(parent, x, width, look)
                 y = y - HEADER
             elseif line.kind == "row" then
                 Style(a, 11, ns.color.dim)
-                Style(b, 11, ns.color.text)
+                Style(b, 11, ns.color.text, true)
                 a:SetJustifyH("LEFT")
                 b:SetJustifyH("RIGHT")
                 a:SetPoint("TOPLEFT", x, y)

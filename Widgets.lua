@@ -3,10 +3,16 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
-local FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+local MEDIA = "Interface\\AddOns\\Hearthbound\\Media\\"
+local GAME_FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 
 ns.WHITE = WHITE
-ns.FONT = FONT
+ns.MEDIA = MEDIA
+ns.BAR = MEDIA .. "Bar"   -- status bar fill: lit at the top, a little darker at the foot
+ns.SOFT = MEDIA .. "Soft" -- a soft round blob, sliced up for shadows and glows
+ns.FONT = GAME_FONT       -- body text (ns.ApplyFont may swap these for the modern font)
+ns.FONT_BOLD = GAME_FONT  -- titles, headings and values
+ns.FONT_BUMP = 0          -- added to every size: the modern font is narrower, so it goes up one
 ns.BACKDROP = BackdropTemplateMixin and "BackdropTemplate" or nil
 
 -- Settings window layout, shared by every tab
@@ -15,15 +21,82 @@ ns.UI.colW = math.floor((ns.UI.width - ns.UI.pad * 2 - ns.UI.gap) / 2) -- two-co
 ns.UI.col2X = ns.UI.pad + ns.UI.colW + ns.UI.gap
 
 ns.color = {
-    bg      = { 0.05, 0.05, 0.06, 0.92 },
-    panel   = { 0.13, 0.13, 0.15, 1 },
-    border  = { 0, 0, 0, 1 },
-    accent  = { 0.80, 0.18, 0.12, 1 }, -- rage red
-    gold    = { 0.78, 0.61, 0.43, 1 }, -- warrior class colour
-    text    = { 0.92, 0.92, 0.92, 1 },
-    dim     = { 0.58, 0.58, 0.60, 1 },
+    bg      = { 0.045, 0.048, 0.056, 0.92 },
+    panel   = { 0.12, 0.125, 0.14, 1 },
+    border  = { 1, 1, 1, 0.09 },    -- a hairline: the glass's edge
+    button  = { 1, 1, 1, 0.05 },
+    well    = { 0, 0, 0, 0.35 },    -- inputs, check boxes and bar tracks sit in a darker well
+    accent  = { 0.86, 0.24, 0.16, 1 }, -- rage red
+    gold    = { 0.84, 0.67, 0.47, 1 }, -- warrior class colour
+    text    = { 0.93, 0.93, 0.94, 1 },
+    label   = { 0.84, 0.85, 0.87, 1 }, -- button words (white when the mouse is over)
+    dim     = { 0.60, 0.62, 0.66, 1 },
 }
 
+---------------------------------------------------------------------------
+-- The font: Barlow (Media/Fonts, SIL Open Font License) for languages written
+-- in Latin letters, the game's own font for the rest or when switched off.
+-- Applied when the addon loads, before any frame is built (so a change needs
+-- a /reload, like the theme).
+---------------------------------------------------------------------------
+local LATIN = { enUS = true, enGB = true, deDE = true, frFR = true, esES = true, esMX = true, itIT = true,
+                ptBR = true, ptPT = true }
+
+function ns.ApplyFont(modern)
+    ns.FONT, ns.FONT_BOLD, ns.FONT_BUMP = GAME_FONT, GAME_FONT, 0
+    if not modern or not LATIN[GetLocale and GetLocale() or "enUS"] then return end
+    local body, bold = MEDIA .. "Fonts\\Barlow-Medium.ttf", MEDIA .. "Fonts\\Barlow-SemiBold.ttf"
+    -- a client that can't load it says so (SetFont returns false): keep the game's font then
+    local probe = UIParent and UIParent:CreateFontString(nil, "OVERLAY")
+    if probe and probe:SetFont(body, 12, "") == false then return end
+    ns.FONT, ns.FONT_BOLD, ns.FONT_BUMP = body, bold, 1
+end
+
+-- every font in the addon is set through here: bold for titles, headings and values
+function ns.SetFont(fs, size, flags, bold)
+    fs:SetFont(bold and ns.FONT_BOLD or ns.FONT, (size or 12) + ns.FONT_BUMP, flags or "")
+end
+
+-- fades a texture (or frame) to an alpha over a moment: buttons' hover washes
+local fading, fader = {}, nil
+function ns.FadeTo(region, alpha, seconds)
+    if not region then return end
+    fading[region] = { alpha, (seconds or 0.15) }
+    if not fader then
+        fader = CreateFrame("Frame")
+        fader:SetScript("OnUpdate", function(self, dt)
+            local any = false
+            for r, f in pairs(fading) do
+                local now = r:GetAlpha() or 0
+                local step = dt / math.max(0.01, f[2])
+                local nextA = now < f[1] and math.min(f[1], now + step) or math.max(f[1], now - step)
+                r:SetAlpha(nextA)
+                if nextA == f[1] then fading[r] = nil else any = true end
+            end
+            if not any then self:Hide() end
+        end)
+    end
+    fader:Show()
+end
+
+-- a two-colour gradient on a texture: VERTICAL runs from a (bottom) to b (top),
+-- HORIZONTAL from a (left) to b (right)
+function ns.Gradient(tex, orient, a, b)
+    tex:SetTexture(WHITE)
+    if CreateColor and tex.SetGradient then
+        local ok = pcall(tex.SetGradient, tex, orient, CreateColor(a[1], a[2], a[3], a[4] or 1),
+            CreateColor(b[1], b[2], b[3], b[4] or 1))
+        if ok then return tex end
+    end
+    if tex.SetGradientAlpha then
+        tex:SetGradientAlpha(orient, a[1], a[2], a[3], a[4] or 1, b[1], b[2], b[3], b[4] or 1)
+    end
+    return tex
+end
+local Gradient = ns.Gradient
+
+local function Tint(c, alpha) return { c[1], c[2], c[3], alpha } end
+ns.Tint = Tint
 local SOUND_CLICK = SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 856
 
 ---------------------------------------------------------------------------
@@ -31,12 +104,12 @@ local SOUND_CLICK = SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 856
 -- as every frame is coloured when it's built)
 ---------------------------------------------------------------------------
 ns.THEMES = {
-    { key = "warrior", label = "Hearthbound", accent = { 0.80, 0.18, 0.12, 1 }, gold = { 0.78, 0.61, 0.43, 1 },
-      bg = { 0.05, 0.05, 0.06, 0.92 }, panel = { 0.13, 0.13, 0.15, 1 } },
-    { key = "slate", label = "Slate", accent = { 0.25, 0.55, 0.85, 1 }, gold = { 0.62, 0.74, 0.86, 1 },
-      bg = { 0.04, 0.06, 0.09, 0.92 }, panel = { 0.10, 0.13, 0.17, 1 } },
-    { key = "midnight", label = "Midnight", accent = { 0.55, 0.30, 0.85, 1 }, gold = { 0.78, 0.66, 0.95, 1 },
-      bg = { 0.05, 0.03, 0.08, 0.92 }, panel = { 0.12, 0.09, 0.16, 1 } },
+    { key = "warrior", label = "Hearthbound", accent = { 0.86, 0.24, 0.16, 1 }, gold = { 0.84, 0.67, 0.47, 1 },
+      bg = { 0.045, 0.048, 0.056, 0.92 }, panel = { 0.12, 0.125, 0.14, 1 } },
+    { key = "slate", label = "Slate", accent = { 0.27, 0.58, 0.90, 1 }, gold = { 0.66, 0.78, 0.90, 1 },
+      bg = { 0.035, 0.05, 0.075, 0.92 }, panel = { 0.10, 0.13, 0.17, 1 } },
+    { key = "midnight", label = "Midnight", accent = { 0.60, 0.36, 0.92, 1 }, gold = { 0.80, 0.69, 0.96, 1 },
+      bg = { 0.045, 0.035, 0.07, 0.92 }, panel = { 0.12, 0.09, 0.16, 1 } },
     { key = "class", label = "Class colour" },
 }
 
@@ -136,13 +209,100 @@ function ns.Skin(f, bg, border)
     f:SetBackdropBorderColor(unpack(border or ns.color.border))
 end
 
-function ns.Text(parent, size, color, flags, layer)
+---------------------------------------------------------------------------
+-- Glass: the look of every Hearthbound window
+---------------------------------------------------------------------------
+-- a soft shadow around a frame, sliced from the Soft blob: corners from its
+-- quarters, edges from its middle row and column
+function ns.Shadow(f, size, alpha)
+    if f.hbShadow then return end
+    size, alpha = size or 14, alpha or 0.55
+    local pieces = {}
+    local function Piece(l, r, t, b)
+        local tx = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+        tx:SetTexture(ns.SOFT)
+        tx:SetTexCoord(l, r, t, b)
+        tx:SetVertexColor(0, 0, 0, alpha)
+        pieces[#pieces + 1] = tx
+        return tx
+    end
+    local m1, m2 = 0.49, 0.51
+    local tl = Piece(0, 0.5, 0, 0.5)
+    tl:SetSize(size, size)
+    tl:SetPoint("BOTTOMRIGHT", f, "TOPLEFT")
+    local tr = Piece(0.5, 1, 0, 0.5)
+    tr:SetSize(size, size)
+    tr:SetPoint("BOTTOMLEFT", f, "TOPRIGHT")
+    local bl = Piece(0, 0.5, 0.5, 1)
+    bl:SetSize(size, size)
+    bl:SetPoint("TOPRIGHT", f, "BOTTOMLEFT")
+    local br = Piece(0.5, 1, 0.5, 1)
+    br:SetSize(size, size)
+    br:SetPoint("TOPLEFT", f, "BOTTOMRIGHT")
+    local top = Piece(m1, m2, 0, 0.5)
+    top:SetPoint("BOTTOMLEFT", tl, "BOTTOMRIGHT")
+    top:SetPoint("TOPRIGHT", tr, "TOPLEFT")
+    local bottom = Piece(m1, m2, 0.5, 1)
+    bottom:SetPoint("TOPLEFT", bl, "TOPRIGHT")
+    bottom:SetPoint("BOTTOMRIGHT", br, "BOTTOMLEFT")
+    local left = Piece(0, 0.5, m1, m2)
+    left:SetPoint("TOPRIGHT", tl, "BOTTOMRIGHT")
+    left:SetPoint("BOTTOMLEFT", bl, "TOPLEFT")
+    local right = Piece(0.5, 1, m1, m2)
+    right:SetPoint("TOPLEFT", tr, "BOTTOMLEFT")
+    right:SetPoint("BOTTOMRIGHT", br, "TOPRIGHT")
+    f.hbShadow = pieces
+end
+
+-- a line of colour across the top of a frame, brightest in the middle, with a
+-- faint glow of it falling down into the frame
+function ns.AccentLine(f, colour, height)
+    local c = colour or ns.color.accent
+    local left = Gradient(f:CreateTexture(nil, "ARTWORK", nil, 7), "HORIZONTAL", Tint(c, 0.25), Tint(c, 1))
+    left:SetPoint("TOPLEFT", 1, -1)
+    left:SetPoint("TOPRIGHT", f, "TOP", 0, -1)
+    left:SetHeight(height or 2)
+    local right = Gradient(f:CreateTexture(nil, "ARTWORK", nil, 7), "HORIZONTAL", Tint(c, 1), Tint(c, 0.25))
+    right:SetPoint("TOPLEFT", f, "TOP", 0, -1)
+    right:SetPoint("TOPRIGHT", -1, -1)
+    right:SetHeight(height or 2)
+    local glow = Gradient(f:CreateTexture(nil, "BACKGROUND", nil, 6), "VERTICAL", Tint(c, 0), Tint(c, 0.10))
+    glow:SetPoint("TOPLEFT", 1, -1)
+    glow:SetPoint("TOPRIGHT", -1, -1)
+    glow:SetHeight(26)
+    return left, right, glow
+end
+
+-- a window: the backdrop (bg, or the theme's), a hairline edge, a sheen down
+-- from the lit top edge, the accent line (opts.line: another colour, or false
+-- for none) and a soft shadow outside
+function ns.Window(f, bg, opts)
+    opts = opts or {}
+    ns.Skin(f, bg or ns.color.bg, opts.border or ns.color.border)
+    if f.hbGlass then return f end
+    f.hbGlass = true
+    local sheen = Gradient(f:CreateTexture(nil, "BACKGROUND", nil, 7), "VERTICAL", { 1, 1, 1, 0 }, { 1, 1, 1, 0.045 })
+    sheen:SetPoint("TOPLEFT", 1, -1)
+    sheen:SetPoint("TOPRIGHT", -1, -1)
+    sheen:SetHeight(opts.sheen or 90)
+    local lit = f:CreateTexture(nil, "BORDER", nil, 7)
+    lit:SetColorTexture(1, 1, 1, 0.10)
+    lit:SetPoint("TOPLEFT", 1, -1)
+    lit:SetPoint("TOPRIGHT", -1, -1)
+    lit:SetHeight(1)
+    if opts.line ~= false then ns.AccentLine(f, opts.line, opts.lineHeight) end
+    if opts.shadow ~= false then ns.Shadow(f) end
+    return f
+end
+
+-- bold: the semi-bold weight (titles, headings, values)
+function ns.Text(parent, size, color, flags, layer, bold)
     local fs = parent:CreateFontString(nil, layer or "OVERLAY")
-    fs:SetFont(FONT, size or 12, flags or "")
+    ns.SetFont(fs, size, flags, bold)
     fs:SetTextColor(unpack(color or ns.color.text))
     if not flags or flags == "" then
         fs:SetShadowOffset(1, -1)
-        fs:SetShadowColor(0, 0, 0, 0.9)
+        fs:SetShadowColor(0, 0, 0, 0.75)
     end
     return fs
 end
@@ -151,7 +311,7 @@ end
 function ns.CreateIcon(parent, size)
     local f = CreateFrame("Frame", nil, parent, ns.BACKDROP)
     f:SetSize(size, size)
-    ns.Skin(f, { 0, 0, 0, 1 }, ns.color.border)
+    ns.Skin(f, { 0, 0, 0, 1 }, { 0, 0, 0, 1 })
     local icon = f:CreateTexture(nil, "ARTWORK")
     icon:SetPoint("TOPLEFT", 1, -1)
     icon:SetPoint("BOTTOMRIGHT", -1, 1)
@@ -164,23 +324,16 @@ end
 function ns.CreateBar(parent, width, height, color)
     local holder = CreateFrame("Frame", nil, parent, ns.BACKDROP)
     holder:SetSize(width, height)
-    ns.Skin(holder, { 0.08, 0.08, 0.09, 0.9 }, ns.color.border)
+    ns.Skin(holder, ns.color.well, { 0, 0, 0, 0.8 })
 
     local bar = CreateFrame("StatusBar", nil, holder)
     bar:SetPoint("TOPLEFT", 1, -1)
     bar:SetPoint("BOTTOMRIGHT", -1, 1)
-    bar:SetStatusBarTexture(WHITE)
+    bar:SetStatusBarTexture(ns.BAR)
     bar:SetStatusBarColor(unpack(color or ns.color.gold))
     bar:SetMinMaxValues(0, 1)
     bar:SetValue(0)
     holder.bar = bar
-
-    -- subtle top highlight for depth
-    local shine = bar:CreateTexture(nil, "OVERLAY")
-    shine:SetPoint("TOPLEFT")
-    shine:SetPoint("TOPRIGHT")
-    shine:SetHeight(math.max(1, math.floor(height / 2.5)))
-    shine:SetColorTexture(1, 1, 1, 0.08)
 
     local textSize = math.max(9, math.min(12, height - 2))
     holder.left = ns.Text(bar, textSize, ns.color.text, "OUTLINE")
@@ -201,13 +354,17 @@ local function AttachTooltip(f, title, tip)
     f:HookScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
--- a section heading: small gold capitals with a rule after them - the same
--- in every panel (Lines.lua's headings and the shell's menu match it)
+-- a section heading: small semi-bold capitals with a rule after them that fades
+-- out - the same in every panel (Lines.lua's headings and the shell's menu match it)
+function ns.HeaderRule(tex, colour)
+    local c = colour or ns.color.gold
+    return Gradient(tex, "HORIZONTAL", Tint(c, 0.35), Tint(c, 0))
+end
+
 function ns.CreateHeader(parent, text, width)
-    local fs = ns.Text(parent, 10, ns.color.gold)
+    local fs = ns.Text(parent, 10, ns.color.gold, nil, nil, true)
     fs:SetText(ns.HeadingIcon(text) .. text:upper()) -- the icon after the capitals: |t must stay lower case
-    local line = parent:CreateTexture(nil, "ARTWORK")
-    line:SetColorTexture(0.78, 0.61, 0.43, 0.3)
+    local line = ns.HeaderRule(parent:CreateTexture(nil, "ARTWORK"))
     line:SetHeight(1)
     line:SetPoint("LEFT", fs, "RIGHT", 8, 0)
     line:SetWidth(math.max(10, width - fs:GetStringWidth() - 8))
@@ -219,31 +376,41 @@ function ns.CreateCheck(parent, label, tip, getter, setter)
     b:SetSize(200, 20)
 
     local box = CreateFrame("Frame", nil, b, ns.BACKDROP)
-    box:SetSize(16, 16)
+    box:SetSize(15, 15)
     box:SetPoint("LEFT")
-    ns.Skin(box, ns.color.panel, ns.color.border)
+    ns.Skin(box, ns.color.well, { 1, 1, 1, 0.18 })
 
     local fill = box:CreateTexture(nil, "ARTWORK")
     fill:SetPoint("TOPLEFT", 3, -3)
     fill:SetPoint("BOTTOMRIGHT", -3, 3)
-    fill:SetColorTexture(unpack(ns.color.accent))
+    fill:SetTexture(ns.BAR)
+    fill:SetVertexColor(unpack(ns.color.accent))
 
     local text = ns.Text(b, 12)
     text:SetPoint("LEFT", box, "RIGHT", 8, 0)
     text:SetText(label)
 
+    local function Edge(hover)
+        local on = getter() and true or false
+        if hover or on then
+            box:SetBackdropBorderColor(unpack(Tint(ns.color.accent, hover and 1 or 0.7)))
+        else
+            box:SetBackdropBorderColor(1, 1, 1, 0.18)
+        end
+    end
     b:SetScript("OnEnter", function()
-        box:SetBackdropBorderColor(unpack(ns.color.gold))
+        Edge(true)
         text:SetTextColor(1, 1, 1)
     end)
     b:SetScript("OnLeave", function()
-        box:SetBackdropBorderColor(unpack(ns.color.border))
+        Edge(false)
         text:SetTextColor(unpack(ns.color.text))
     end)
     AttachTooltip(b, label, tip)
 
     function b.Refresh()
         fill:SetShown(getter() and true or false)
+        Edge(b:IsMouseOver())
     end
     b:SetScript("OnClick", function()
         setter(not getter())
@@ -254,33 +421,48 @@ function ns.CreateCheck(parent, label, tip, getter, setter)
     return b
 end
 
+-- a button: a faint pane with a hairline edge; the accent washes up through it
+-- when the mouse is over it, and stays on a selected one (tabs, filters).
+-- "x" makes a close button: no pane until the mouse is over it
 function ns.CreateButton(parent, label, width, height, onClick)
     local b = CreateFrame("Button", nil, parent, ns.BACKDROP)
     b:SetSize(width, height)
-    ns.Skin(b, ns.color.panel, ns.color.border)
-    b.text = ns.Text(b, 12, ns.color.gold)
+    local ghost = label == "x"
+    if ghost and ns.FONT_BUMP > 0 then label = "×" end
+    local restBg = ghost and { 0, 0, 0, 0 } or ns.color.button
+    local restEdge = ghost and { 0, 0, 0, 0 } or ns.color.border
+    ns.Skin(b, restBg, restEdge)
+    b.wash = Gradient(b:CreateTexture(nil, "BACKGROUND", nil, 7), "VERTICAL",
+        Tint(ns.color.accent, 0.08), Tint(ns.color.accent, 0.30))
+    b.wash:SetPoint("TOPLEFT", 1, -1)
+    b.wash:SetPoint("BOTTOMRIGHT", -1, 1)
+    b.wash:SetAlpha(0)
+    b.text = ns.Text(b, ghost and 13 or 12, ns.color.label)
     b.text:SetPoint("CENTER")
     b.text:SetText(label)
     b:SetScript("OnEnter", function(self)
-        self:SetBackdropBorderColor(unpack(ns.color.accent))
+        self:SetBackdropBorderColor(unpack(Tint(ns.color.accent, 0.9)))
         self.text:SetTextColor(1, 1, 1)
+        ns.FadeTo(self.wash, 1, 0.12)
     end)
     b:SetScript("OnLeave", function(self)
         if self.selected then
-            self:SetBackdropBorderColor(unpack(ns.color.accent))
+            self:SetBackdropBorderColor(unpack(Tint(ns.color.accent, 0.75)))
             self.text:SetTextColor(1, 1, 1)
+            ns.FadeTo(self.wash, 0.7, 0.2)
         else
-            self:SetBackdropBorderColor(unpack(ns.color.border))
-            self.text:SetTextColor(unpack(ns.color.gold))
+            self:SetBackdropBorderColor(unpack(restEdge))
+            self.text:SetTextColor(unpack(ns.color.label))
+            ns.FadeTo(self.wash, 0, 0.2)
         end
     end)
-    b:SetScript("OnMouseDown", function(self) self.text:SetPoint("CENTER", 1, -1) end)
+    b:SetScript("OnMouseDown", function(self) self.text:SetPoint("CENTER", 0, -1) end)
     b:SetScript("OnMouseUp", function(self) self.text:SetPoint("CENTER") end)
     b:SetScript("OnClick", function(self)
         ns.PlaySound(SOUND_CLICK)
         onClick(self)
     end)
-    -- selected buttons (tabs, filters) keep the accent border
+    -- selected buttons (tabs, filters) keep the accent
     function b.SetSelected(_, selected)
         b.selected = selected
         b:GetScript("OnLeave")(b)
@@ -291,8 +473,8 @@ end
 function ns.CreateEditBox(parent, width, height, placeholder)
     local eb = CreateFrame("EditBox", nil, parent, ns.BACKDROP)
     eb:SetSize(width, height)
-    ns.Skin(eb, ns.color.panel, ns.color.border)
-    eb:SetFont(FONT, 12, "")
+    ns.Skin(eb, ns.color.well, ns.color.border)
+    ns.SetFont(eb, 12)
     eb:SetTextColor(unpack(ns.color.text))
     eb:SetTextInsets(8, 8, 0, 0)
     eb:SetAutoFocus(false)
@@ -301,7 +483,7 @@ function ns.CreateEditBox(parent, width, height, placeholder)
     hint:SetText(placeholder or "")
     eb:SetScript("OnEscapePressed", eb.ClearFocus)
     eb:SetScript("OnEnterPressed", eb.ClearFocus)
-    eb:SetScript("OnEditFocusGained", function(self) self:SetBackdropBorderColor(unpack(ns.color.gold)) end)
+    eb:SetScript("OnEditFocusGained", function(self) self:SetBackdropBorderColor(unpack(ns.color.accent)) end)
     eb:SetScript("OnEditFocusLost", function(self) self:SetBackdropBorderColor(unpack(ns.color.border)) end)
     eb:HookScript("OnTextChanged", function(self)
         hint:SetShown(self:GetText() == "")
@@ -309,6 +491,7 @@ function ns.CreateEditBox(parent, width, height, placeholder)
     return eb
 end
 
+-- a slider: a thin track, filled with the accent up to a light thumb
 function ns.CreateSlider(parent, label, tip, minV, maxV, step, fmt, getter, setter)
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(200, 36)
@@ -316,14 +499,13 @@ function ns.CreateSlider(parent, label, tip, minV, maxV, step, fmt, getter, sett
     local title = ns.Text(f, 12)
     title:SetPoint("TOPLEFT")
     title:SetText(label)
-    local value = ns.Text(f, 12, ns.color.gold)
+    local value = ns.Text(f, 12, ns.color.gold, nil, nil, true)
     value:SetPoint("TOPRIGHT")
 
-    local s = CreateFrame("Slider", nil, f, ns.BACKDROP)
-    s:SetPoint("TOPLEFT", 0, -20)
-    s:SetPoint("TOPRIGHT", 0, -20)
-    s:SetHeight(10)
-    ns.Skin(s, ns.color.panel, ns.color.border)
+    local s = CreateFrame("Slider", nil, f)
+    s:SetPoint("TOPLEFT", 0, -18)
+    s:SetPoint("TOPRIGHT", 0, -18)
+    s:SetHeight(14)
     s:SetOrientation("HORIZONTAL")
     s:SetMinMaxValues(minV, maxV)
     s:SetValueStep(step)
@@ -331,16 +513,21 @@ function ns.CreateSlider(parent, label, tip, minV, maxV, step, fmt, getter, sett
     s:EnableMouse(true)
     s:EnableMouseWheel(true)
 
+    local track = s:CreateTexture(nil, "BACKGROUND")
+    track:SetColorTexture(1, 1, 1, 0.10)
+    track:SetPoint("LEFT")
+    track:SetPoint("RIGHT")
+    track:SetHeight(4)
+
     local thumb = s:CreateTexture(nil, "OVERLAY")
-    thumb:SetColorTexture(unpack(ns.color.gold))
-    thumb:SetSize(8, 14)
+    thumb:SetColorTexture(0.95, 0.95, 0.97, 1)
+    thumb:SetSize(6, 14)
     s:SetThumbTexture(thumb)
 
-    local fill = s:CreateTexture(nil, "ARTWORK")
-    fill:SetColorTexture(unpack(ns.color.accent))
-    fill:SetPoint("TOPLEFT", 1, -1)
-    fill:SetPoint("BOTTOMLEFT", 1, 1)
+    local fill = Gradient(s:CreateTexture(nil, "ARTWORK"), "HORIZONTAL", Tint(ns.color.accent, 0.55), Tint(ns.color.accent, 1))
+    fill:SetPoint("LEFT", track, "LEFT")
     fill:SetPoint("RIGHT", thumb, "CENTER")
+    fill:SetHeight(4)
 
     local function Round(v) return math.floor(v / step + 0.5) * step end
 
@@ -352,6 +539,8 @@ function ns.CreateSlider(parent, label, tip, minV, maxV, step, fmt, getter, sett
     s:SetScript("OnMouseWheel", function(self, delta)
         self:SetValue(math.min(maxV, math.max(minV, self:GetValue() + delta * step)))
     end)
+    s:SetScript("OnEnter", function() thumb:SetColorTexture(1, 1, 1, 1) end)
+    s:SetScript("OnLeave", function() thumb:SetColorTexture(0.95, 0.95, 0.97, 1) end)
     AttachTooltip(s, label, tip)
 
     function f.Refresh()

@@ -1011,7 +1011,7 @@ local function Segmented(parent, items, width, onPick)
     local buttons = {}
     for i, item in ipairs(items) do
         local b = ns.CreateButton(parent, item[2], width, 20, function() onPick(item[1]) end)
-        b.text:SetFont(ns.FONT, 10, "")
+        ns.SetFont(b.text, 10, "")
         b.key = item[1]
         if i > 1 then b:SetPoint("LEFT", buttons[i - 1], "RIGHT", -1, 0) end
         buttons[i] = b
@@ -1092,10 +1092,10 @@ local function BuildWindow(parent)
         end
         ns.Print("No cards listed for " .. (zone or "this zone") .. ".")
     end)
-    here.text:SetFont(ns.FONT, 10, "")
+    ns.SetFont(here.text, 10, "")
     here:SetPoint("TOPLEFT", 9, -26)
     local other = ns.CreateButton(zp, "Elsewhere", (ZONE_W - 26) / 2, 20, function() SelectZone("other") end)
-    other.text:SetFont(ns.FONT, 10, "")
+    ns.SetFont(other.text, 10, "")
     other:SetPoint("LEFT", here, "RIGHT", 8, 0)
     other:HookScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")

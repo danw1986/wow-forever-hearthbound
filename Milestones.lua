@@ -29,7 +29,7 @@ local function BuildToast()
     toast:SetSize(340, 64)
     toast:SetPoint("TOP", UIParent, "TOP", 0, -150)
     toast:SetFrameStrata("HIGH")
-    ns.Skin(toast, { 0.05, 0.05, 0.06, 0.95 }, ns.color.gold)
+    ns.Window(toast, { ns.color.bg[1], ns.color.bg[2], ns.color.bg[3], 0.95 }, { line = false, sheen = 50 })
 
     local accent = toast:CreateTexture(nil, "ARTWORK")
     accent:SetColorTexture(unpack(ns.color.accent))
