@@ -73,6 +73,7 @@ GuideSync.lua
 GuideItemButton.lua
 GuideLogTidy.lua
 GuideMap.lua
+DungeonPickup.lua
 Grind.lua
 Minimap.lua
 Journey.lua

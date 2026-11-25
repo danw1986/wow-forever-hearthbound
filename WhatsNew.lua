@@ -10,6 +10,12 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.13.0", items = {
+        { "Dungeon pick-ups",
+          "A guide of its own for collecting a dungeon's quests, in a window beside your levelling guide: everything each quest needs done first, in order, nearest stop first, then the entrance. The arrow follows it while it's open, and your place in the levelling guide never moves. Open it from a dungeon's page (Open the pick-up guide), the guide's ... menu, or /hb pickup." },
+        { "Mount Hyjal, and a refreshed route",
+          "Forever's new endgame zone is on the route at 56-58, between the Eastern Plaguelands and Silithus. About fifty more quests across the levels, Timbermaw steps that wait for the standing they need, and cooking quests for cooks. Your place, skips and bookmarks carry over." },
+    } },
     { version = "0.12.0", items = {
         { "A new look",
           "Every Hearthbound window has a fresh, sleeker style: smoked-glass panels with a soft shadow, a glowing accent line along the top, a clean modern font, shaded bars, and buttons that light up in your theme's colour as you point at them. Prefer the game's own font? Turn off Modern font under Colours.",
