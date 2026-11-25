@@ -1986,6 +1986,9 @@ function ArrowStep(stepOnly)
     if not stepOnly then
         local m = ns.GuideMarker and ns.GuideMarker()
         if m then return m end
+        -- the dungeon pick-up guide, while its window is open (your place here stays put)
+        local pick = ns.DungeonPickupArrowStep and ns.DungeonPickupArrowStep()
+        if pick then return pick end
         if followKey and classDetour and DetourKey(classDetour) == followKey then
             local st = DetourStep(classDetour, "Class: ")
             if st then return st end
@@ -2690,11 +2693,13 @@ function ns.GuideMoreMenu()
         end
         items[#items + 1] = { ns.db.guideCompact and "Show tips and progress" or "Hide tips and progress", function() ns.GuideCommand("compact") end }
         items[#items + 1] = { "Tidy quest log", function() if ns.ShowGuideTidy then ns.ShowGuideTidy() end end }
+        items[#items + 1] = { "Dungeon quest pick-ups...", function() if ns.ToggleDungeonPickup then ns.ToggleDungeonPickup() end end }
         items[#items + 1] = { "All guide options...", function() if ns.ShellOpen then ns.ShellOpen("guide") end end }
         return ns.GuideMenu("Guide", items)
     end
     for _, item in ipairs({
         { "Tidy my quest log", function() if ns.ShowGuideTidy then ns.ShowGuideTidy() end end },
+        { "Dungeon quest pick-ups...", function() if ns.ToggleDungeonPickup then ns.ToggleDungeonPickup() end end },
         { "Find my place", function() ns.GuideFindPlace() end },
         { "Back to the previous zone", function() ns.GuidePreviousZone() end },
         { "Jump to the zone I'm in", function() ns.GuideHere() end },

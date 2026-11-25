@@ -467,6 +467,8 @@ SlashCmdList.HEARTHBOUND = function(input)
         ns.QuestTargetsProbe()
     elseif cmd == "targets" then
         ns.ToggleQuestTargets()
+    elseif cmd == "pickup" or cmd:sub(1, 7) == "pickup " then
+        ns.DungeonPickupCommand(cmd:sub(8))
     elseif cmd == "nearby" then
         ns.NearbyProbe()
     elseif cmd == "questie" then
@@ -516,6 +518,7 @@ SlashCmdList.HEARTHBOUND = function(input)
         ns.Print("/hb debug | export | import - debug report, settings profiles")
         ns.Print("/hb mem - this addon's memory and whether it's really growing")
         ns.Print("/hb targets - show or hide the quest targets window")
+        ns.Print("/hb pickup [dungeon] - a guide to a dungeon's quests and what comes first, beside your route")
         ns.Print("/hb targets debug - list what the quest targets window can see")
         ns.Print("/hb nearby - check why the Nearby quest list is empty (target a quest giver first)")
         ns.Print("/hb toast - preview a milestone pop-up")

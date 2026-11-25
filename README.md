@@ -71,6 +71,9 @@ tools into one window, and keeps a record of each character's journey to 60.
   picture for each dungeon
 - For a quest that needs others first, the whole chain before it: each quest in
   order with its giver and zone, the ones you've done ticked and where to start
+- Dungeon pick-ups: a guide of its own, beside the levelling guide, that collects a
+  dungeon's quests and everything they need first, nearest stop first, then takes
+  you to the entrance - without moving your place in the route (`/hb pickup`)
 
 **Journey and stats**
 - Journey tab: road to 60, milestones reached, deaths and level history
@@ -117,6 +120,7 @@ tools into one window, and keeps a record of each character's journey to 60.
 | `/hb quests` / `stats` / `journey` / `alts` / `dungeons` / `achievements` | Open that tab |
 | `/hb cards` | Enemy card collection |
 | `/hb targets` | Quest targets window |
+| `/hb pickup [dungeon]` | Dungeon pick-up guide |
 | `/hb goal <level>` | Set a session goal |
 | `/hb left` / `left <n>` / `left clear` | Quests you walked away from |
 | `/hb accept` | Toggle auto accept |

@@ -1261,9 +1261,8 @@ end
 
 ---------------------------------------------------------------------------
 -- Pick up first: the dungeon's quests you can take but haven't, nearest
--- first, with a route that marks each giver in turn and then the entrance
+-- first; the pick-up guide (DungeonPickup.lua) walks you round them
 ---------------------------------------------------------------------------
-local route -- { key, items = { { title, giver, mapID, x, y } } }
 
 local function YardsTo(spot)
     if not (spot and ns.PlayerWorldPos and ns.WorldPos) then return nil end
@@ -1326,57 +1325,6 @@ local function PickupList(d)
     return list
 end
 
-local function MarkNextInRoute()
-    if not route then return end
-    for i = #route.items, 1, -1 do
-        if QuestStatus(route.items[i].title) then table.remove(route.items, i) end
-    end
-    local d = byKey[route.key]
-    if #route.items == 0 then
-        route = nil
-        if not d then return end
-        ns.Print(format("All of %s's quests picked up - marking the entrance.", d.name))
-        local mapID, x, y = Entrance(d)
-        if mapID and x then ns.SetWaypoint(mapID, x, y, d.name .. " entrance") end
-        return
-    end
-    for _, item in ipairs(route.items) do item.yards = YardsTo(item) end
-    table.sort(route.items, function(a, b) return (a.yards or math.huge) < (b.yards or math.huge) end)
-    local nextStop = route.items[1]
-    ns.SetWaypoint(nextStop.mapID, nextStop.x, nextStop.y, (nextStop.giver or "?") .. " - " .. nextStop.title)
-    if #route.items > 1 then
-        ns.Print(format("%s route: %d more quest%s to pick up after this one.", d and d.name or "Dungeon",
-            #route.items - 1, #route.items == 2 and "" or "s"))
-    end
-end
-
-local function StartRoute(d, list)
-    route = { key = d.key, items = {} }
-    for _, entry in ipairs(list) do
-        local spot = entry.spec.spot
-        if spot then
-            local giver = entry.q.giver
-            if not giver or giver == "?" then giver = entry.spec.who end
-            route.items[#route.items + 1] = { title = entry.q.title, giver = giver, mapID = spot.mapID, x = spot.x, y = spot.y }
-        end
-    end
-    -- TomTom can show every stop at once
-    if TomTom and TomTom.AddWaypoint then
-        for i = 2, #route.items do
-            local stop = route.items[i]
-            pcall(TomTom.AddWaypoint, TomTom, stop.mapID, stop.x / 100, stop.y / 100, { title = stop.title })
-        end
-    end
-    MarkNextInRoute()
-end
-
--- picking up a quest on the route moves the marker on to the next giver
-table.insert(ns.inits, function()
-    ns.On("QUEST_ACCEPTED", function()
-        if route then C_Timer.After(0.6, MarkNextInRoute) end
-    end)
-end)
-
 local function AddPickupSection(d, Add)
     if d.max and UnitLevel("player") > d.max + 5 then return end -- long past it
     local list = PickupList(d)
@@ -1396,9 +1344,9 @@ local function AddPickupSection(d, Add)
     for _, entry in ipairs(list) do if entry.spec.spot then withSpot = withSpot + 1 end end
     local count = format("%d quest%s to collect before you go in.", #list, #list == 1 and "" or "s")
     if withSpot > 0 then
-        Add({ text = count .. "   |cffffd200Mark route (nearest first) >|r",
-              onClick = function() StartRoute(d, list) end,
-              tooltip = "Marks the nearest quest giver. Each time you pick one up, the marker moves on to the next, then to the entrance." })
+        Add({ text = count .. "   |cffffd200Open the pick-up guide >|r",
+              onClick = function() if ns.OpenDungeonPickup then ns.OpenDungeonPickup(d.key) end end,
+              tooltip = "A guide of its own beside your levelling guide: what each quest needs done first, in order, nearest first, then the entrance. The arrow follows it while it's open; your place in the levelling guide doesn't move." })
     else
         Add({ text = count })
     end
