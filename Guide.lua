@@ -47,7 +47,7 @@ local ZONE_MAPS = {
     [405] = 1443, [15] = 1445, [8] = 1435, [440] = 1446, [357] = 1444, [47] = 1425, [490] = 1449,
     [361] = 1448, [618] = 1452, [3] = 1418, [51] = 1427, [28] = 1422, [139] = 1423,
     [36] = 1416, [16] = 1447, [46] = 1428, [1377] = 1451, [16593] = 2521, [493] = 1450,
-    [16591] = 2548, [16651] = 2652, -- the Riverglades, Shen'dralas
+    [16591] = 2548, [16651] = 2652, [616] = 2482, -- the Riverglades, Shen'dralas, Mount Hyjal
 }
 
 local list = {}    -- this character's steps, in order
@@ -511,16 +511,31 @@ function K.KnowsSpell(id)
     return false
 end
 
+-- a profession or skill you have: its rank (or true when the game doesn't say), else nil
 function K.SkillKnown(name)
     local now = GetTime()
     if not K.skills or now - K.skillsAt > 5 then
         K.skills, K.skillsAt = {}, now
         for i = 1, GetNumSkillLines and Safe(GetNumSkillLines) or 0 do
-            local skill, isHeader = Safe(GetSkillLineInfo, i)
-            if skill and not isHeader then K.skills[skill] = true end
+            local skill, isHeader, _, rank = Safe(GetSkillLineInfo, i)
+            if skill and not isHeader then K.skills[skill] = type(rank) == "number" and rank or true end
         end
     end
     return K.skills[name]
+end
+
+-- your standing with a faction is at least this (1 Hated .. 4 Neutral .. 8 Exalted);
+-- a faction the game can't tell us about counts as not there yet
+function K.RepAtLeast(id, standing)
+    local reaction
+    if C_Reputation and C_Reputation.GetFactionDataByID then
+        local data = Safe(C_Reputation.GetFactionDataByID, id)
+        reaction = type(data) == "table" and data.reaction or nil
+    end
+    if type(reaction) ~= "number" and GetFactionInfoByID then
+        reaction = select(3, Safe(GetFactionInfoByID, id))
+    end
+    return type(reaction) == "number" and reaction >= standing
 end
 
 function K.WhenHolds(s)
@@ -532,6 +547,11 @@ function K.WhenHolds(s)
     if s.moneyMin and (Safe(GetMoney) or 0) < s.moneyMin then return false end
     if s.noSkill and K.SkillKnown(s.noSkill) then return false end
     if s.skill and not K.SkillKnown(s.skill) then return false end
+    if s.skillMin then
+        local rank = K.SkillKnown(s.skillMin[1])
+        if not rank or (type(rank) == "number" and rank < s.skillMin[2]) then return false end
+    end
+    if s.rep and not K.RepAtLeast(s.rep[1], s.rep[2]) then return false end
     if s.notKnown and K.KnowsSpell(s.notKnown) then return false end
     if s.inZone and Safe(GetRealZoneText) ~= s.inZone then return false end
     if s.notInZone and Safe(GetRealZoneText) == s.notInZone then return false end

@@ -38,7 +38,7 @@ ZONE_ID.update({  # the ones the old routes never named
     "Felwood": 361, "Feralas": 357, "Moonglade": 493, "Mulgore": 215, "Orgrimmar": 1637, "Silithus": 1377,
     "Stonetalon Mountains": 406, "Tanaris": 440, "Teldrassil": 141, "The Barrens": 17, "Thousand Needles": 400,
     "Thunder Bluff": 1638, "Un'Goro Crater": 490, "Winterspring": 618, "Zephras Isle": 16593,
-    "Riverglades": 16591, "Shen'dralas": 16651,
+    "Riverglades": 16591, "Shen'dralas": 16651, "Mount Hyjal": 616,
 })
 ZONE_NAME = {v: k for k, v in ZONE_ID.items()}
 # uiMap IDs (for "zone map <id>" / "map <id>") -> AreaTable, from Guide.lua's ZONE_MAPS
@@ -318,6 +318,13 @@ def money(text):
     return int(m.group(1) or 0) * 10000 + int(m.group(2) or 0) * 100 + int(m.group(3) or 0)
 
 
+# "when rep" factions and standings (the game's faction IDs, and standing 1 Hated .. 8 Exalted)
+FACTIONS = {"Timbermaw Hold": 576, "Cenarion Circle": 609, "Thorium Brotherhood": 59, "Argent Dawn": 529,
+            "Hydraxian Waterlords": 749, "Brood of Nozdormu": 910, "Zandalar Tribe": 270, "Ravenholdt": 349}
+STANDINGS = {"Hated": 1, "Hostile": 2, "Unfriendly": 3, "Neutral": 4, "Friendly": 5, "Honored": 6, "Revered": 7,
+             "Exalted": 8}
+
+
 def when_fields(lines, guide_id):
     """a step's "when" lines -> the fields Guide.lua checks as you play (K.WhenHolds)"""
     out = {}
@@ -345,6 +352,10 @@ def when_fields(lines, guide_id):
             out["noSkill"] = arg
         elif word == "skill" and len(toks) > 2 and toks[2][1] == "1":
             out["skill"] = arg  # only with this profession (Camping 101's profession quests)
+        elif word == "skill" and len(toks) > 2 and toks[2][1].isdigit():
+            out["skillMin"] = [arg, int(toks[2][1])]  # only with this much of a profession (Desert Recipe)
+        elif word == "rep" and len(toks) > 2 and arg in FACTIONS and toks[2][1] in STANDINGS:
+            out["rep"] = [FACTIONS[arg], STANDINGS[toks[2][1]]]  # only from this standing with a faction
         elif word == "!knows" and arg.isdigit():
             out["notKnown"] = int(arg)  # only while you don't know this spell or recipe
         elif word in ("turnedin", "!turnedin", "!onquest", "available") and re.fullmatch(r"[\d,]+", "".join(t[1] for t in toks[1:])):
@@ -399,7 +410,7 @@ def lua(v):
 
 
 FIELD_ORDER = ["t", "q", "obj", "name", "text", "gv", "gw", "optional", "group", "foreverOnly", "z", "x", "y", "target",
-               "note", "tip", "races", "classes", "lvlBelow", "lvlMin", "moneyMin", "noSkill", "skill", "notKnown", "turnedIn", "notTurnedIn", "notOnQuest", "notReady", "available", "hasAtLeast", "inZone", "notInZone", "taxi", "notTaxi", "direct", "bound", "notBound", "onQuest", "solo",
+               "note", "tip", "races", "classes", "lvlBelow", "lvlMin", "moneyMin", "noSkill", "skill", "skillMin", "rep", "notKnown", "turnedIn", "notTurnedIn", "notOnQuest", "notReady", "available", "hasAtLeast", "inZone", "notInZone", "taxi", "notTaxi", "direct", "bound", "notBound", "onQuest", "solo",
                "ready", "hasBelow", "section", "zoneName", "p", "place", "was"]
 PLACE_ID = [0]  # each upstream step: one place, its goals shown together
 
@@ -684,6 +695,12 @@ def convert(guide, place, out):
                     s.update(t="N", text=text)
                     if "xy" in mods:
                         at(s)
+                elif verb == "abandon" and pos and pos.isdigit():
+                    # a quest the route won't come back for: a note while it's still in your
+                    # log (the step's "when onquest" goes false once you drop it)
+                    name = (Q.get(pos) or {}).get("name") or f"quest {pos}"
+                    s.update(t="N", text=f"Abandon {name}")
+                    s.setdefault("onQuest", [int(pos)])
                 else:
                     warnings.append(f"{guide['guide']}: skipped {verb}")
                     continue

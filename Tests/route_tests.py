@@ -171,10 +171,10 @@ W.tick()
 s_, j, _ = ns.GuideCurrent()
 check("a stuck picked note is let go: back on your place", j < note and st.force != lst[note].i, (j, note, st.force))
 
-# 6b. walking into a zone whose only part left is well above you (Azshara at 29: the
-# level 56 sealed crates and the rest of its 50s part): the guide stays put
+# 6b. walking into a zone whose only part left is well above you (Azshara at 29: its
+# last part, in the 50s): the guide stays put
 SECTIONS = re.findall(r'section="([^"]*)"', open(ADDON + "GuideData.lua", encoding="utf-8").read())
-HIGH_SEC = next(s for s in SECTIONS if s.startswith("Azshara & The Barrens ("))  # (the 55-56 crates part)
+HIGH_SEC = [s for s in SECTIONS if "Azshara" in s][-1]  # Azshara's last part, in the 50s
 
 
 def azshara_at_29(mark_high=False):
@@ -206,12 +206,12 @@ def arrive(W, zone):
 L, W, ns = azshara_at_29()
 arrive(W, "Azshara")
 s_, j, _ = ns.GuideCurrent()
-check("level 29 into Azshara, only its 56 part left: the guide doesn't jump there",
+check("level 29 into Azshara, only its 50s part left: the guide doesn't jump there",
       s_.section != HIGH_SEC, (j, s_.section, s_.name or s_.text))
 L, W, ns = azshara_at_29(mark_high=True)
 arrive(W, "Azshara")
 s_, j, _ = ns.GuideCurrent()
-check("...nor to an old bookmark there at level 56", s_.section != HIGH_SEC, (j, s_.section))
+check("...nor to an old bookmark there in the 50s", s_.section != HIGH_SEC, (j, s_.section))
 ns.GuideHere()
 W.tick()
 s_, j, _ = ns.GuideCurrent()
@@ -221,10 +221,11 @@ check("...but asking for the zone you're in still takes you there", s_.section =
 L, W, ns = azshara_at_29()
 lst = ns._dbg.list()
 st = ns._dbg.state()
-high = next(k for k in range(1, len(lst) + 1) if lst[k].section == HIGH_SEC and lst[k].t in ("A", "T") and lst[k].q == 91904)
+high = next(k for k in range(1, len(lst) + 1) if lst[k].section == HIGH_SEC and lst[k].t in ("A", "T")
+            and lst[k].zoneName == "Azshara")
 st.pos, st.hold, st.force = lst[high].i, False, None
 W.zone = "Azshara"; W.tick()
-check("(left at the level 56 crates)", ns.GuideCurrent()[0].section == HIGH_SEC, ns.GuideCurrent()[0].section)
+check("(left at Azshara's 50s part)", ns.GuideCurrent()[0].section == HIGH_SEC, ns.GuideCurrent()[0].section)
 tn_sec = next(lst[k].section for k in range(1, len(lst) + 1) if lst[k].zoneName == "Thousand Needles" and lst[k].t == "A"
               and "Barrens" not in (lst[k].section or ""))
 zones = {}
@@ -243,7 +244,7 @@ ns.db.guideAutoZone, ns.db.guideZonePrompt, ns.db.guideSkipGrey = True, True, Tr
 L.execute("W.clock = 100000 HARNESS_G.time = function() return W.clock end")
 lst = ns._dbg.list()
 st = ns._dbg.state()
-hb = next(k for k in range(1, len(lst) + 1) if (lst[k].section or "").startswith("Hillsbrad Foothills (22-") and lst[k].t == "A")
+hb = next(k for k in range(1, len(lst) + 1) if (lst[k].section or "").startswith("Hillsbrad Foothills (2") and lst[k].t == "A")
 sp = next(k for k in range(hb, 0, -1) if lst[k].zoneName == "Silverpine Forest" and lst[k].t in ("A", "C", "T")
           and (lst[k].section or "") != lst[hb].section)
 arrive(W, "Hillsbrad Foothills")
@@ -290,17 +291,17 @@ ns.GuideResumeZone("Silverpine Forest")
 check("choosing Silverpine picks up where you were there", ns.GuideCurrent()[0].section == lst[sp].section,
       ns.GuideCurrent()[0].section)
 
-# 6c. find my place: a level 60 sealed crate handed in at 29 doesn't put you at the end of the route
+# 6c. find my place: a level 60 quest handed in at 29 (the route's last hand-in) doesn't put you at the end of it
 L, W, ns = fresh(race="Orc", raceId=2, level=29)
 lst = ns._dbg.list()
-crate = next(k for k in range(1, len(lst) + 1) if lst[k].t == "T" and lst[k].q == 91899)
-W.completed[91899] = True
+crate = next(k for k in range(len(lst), 0, -1) if lst[k].t == "T" and lst[k].q)
+W.completed[lst[crate].q] = True
 for k in range(1, 1700):
     if lst[k].t == "T" and lst[k].q:
         W.completed[lst[k].q] = True
 ns.GuideFindPlace()
 s_, j, _ = ns.GuideCurrent()
-check("find my place ignores a level 60 crate you handed in at 29", j < crate - 500, (j, crate, s_.section))
+check("find my place ignores a level 60 quest you handed in at 29", j < crate - 500, (j, crate, s_.section))
 
 # 7. steps that apply only sometimes: checked as you play, kept in the route
 STATE = """
@@ -487,6 +488,7 @@ ns.cdb.flightsKnown = None
 secs = [s_ for s_ in SECTIONS]
 check("the Riverglades are on the route", any(s_.startswith("Riverglades (") for s_ in secs))
 check("...and Shen'dralas", any(s_.startswith("Shen'dralas (") for s_ in secs))
+check("...and Mount Hyjal", any(s_.startswith("Mount Hyjal (") for s_ in secs))
 # Camping 101's profession quests: only with that profession, and only while you don't know its camp recipe
 L, W, ns, lst = playing(race="Orc", raceId=2, level=5)
 L.execute("HARNESS_G.IsPlayerSpell = function() return false end HARNESS_G.IsSpellKnown = function() return false end HARNESS_G.C_SpellBook = { IsSpellKnown = function() return false end }")
@@ -564,6 +566,41 @@ W.tick()
 check("one of them in the log: applies", ns._dbg.whenHolds(fake))
 check("a quest done on the way never stops the route", lst[find(lst, t="C", q=869, optional=True) or 1].optional)
 
+# a step for a reputation standing (Kernda in Timbermaw Hold: from Neutral) and one for a
+# profession's rank (Desert Recipe: Cooking 285)
+L, W, ns, lst = playing(race="Orc", raceId=2, level=50)
+L.execute("""
+HARNESS_G.C_Reputation = {}
+HARNESS_G.GetFactionInfoByID = function(id) return "Faction " .. id, "", (W.rep or {})[id] end
+HARNESS_G.GetSkillLineInfo = function(i) local s = W.skills[i] return s[1], false, false, s[2] end
+""")
+k = next((n for n in range(1, len(lst) + 1) if lst[n].rep), None)
+check("the route has steps for a reputation standing", k is not None)
+if k:
+    fac, need = lst[k].rep[1], lst[k].rep[2]
+    L.execute(f"W.rep = {{ [{fac}] = {need - 1} }}")
+    check("...one standing short: it doesn't apply", not ns._dbg.whenHolds(lst[k]))
+    L.execute(f"W.rep = {{ [{fac}] = {need} }}")
+    check("...at that standing: it does", ns._dbg.whenHolds(lst[k]))
+    L.execute("W.rep = {}")
+    check("...a faction you've never met: it doesn't", not ns._dbg.whenHolds(lst[k]))
+k = next((n for n in range(1, len(lst) + 1) if lst[n].skillMin), None)
+check("the route has a step for a profession's rank", k is not None)
+if k:
+    name, need = lst[k].skillMin[1], lst[k].skillMin[2]
+    L.execute(f'W.skills = {{ {{ "{name}", {need - 10} }} }}')
+    W.time = W.time + 10
+    check("...below that rank: it doesn't apply", not ns._dbg.whenHolds(lst[k]))
+    L.execute(f'W.skills = {{ {{ "{name}", {need} }} }}')
+    W.time = W.time + 10
+    check("...at it: it does", ns._dbg.whenHolds(lst[k]))
+    L.execute("W.skills = {}")
+    W.time = W.time + 10
+    check("...without the profession: it doesn't", not ns._dbg.whenHolds(lst[k]))
+abandon = next((n for n in range(1, len(lst) + 1) if lst[n].t == "N" and (lst[n].text or "").startswith("Abandon ")), None)
+check("a quest the route won't come back for has an Abandon note, only while it's in your log",
+      abandon is not None and lst[abandon].onQuest is not None)
+
 # handed in under another ID (Forever does this): noticed, though the list of names is kept between checks
 L, W, ns, lst = playing(level=12)
 k = find(lst, t="T", q=lst[find(lst, t="A")].q)
@@ -635,7 +672,7 @@ check("every quest has its real name", 'name="Quest ' not in data)
 check("no deathskips: they're opt-in upstream, and never on Hardcore", "Deathskip" not in data)
 check("the route says which upstream it's adapted from, and its licence", re.search(r"polestar v[\d.]+ \(guides/forever\), GPL-3\.0-only", data) is not None)
 # Mulgore is one of the maps Forever redrew: typed in Era's frame, converted to Forever's
-check("a typed Mulgore point lands where it is on Forever's map", 'text="The Venture Co. Mine", z=215, x=61.19, y=49.31' in data)
+check("a typed Mulgore point lands where it is on Forever's map", 'text="Into Mulgore", z=215, x=42.32, y=31.27' in data)
 # every start goes on to Silverpine Forest (the route's shared part starts there since 0.3.5)
 want = next(s for s in SECTIONS if s.startswith("Silverpine Forest (12-"))
 for race, rid, start in (("Orc", 2, "Durotar"), ("Troll", 8, "Durotar"), ("Tauren", 6, "Mulgore"),

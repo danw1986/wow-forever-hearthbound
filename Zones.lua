@@ -19,7 +19,7 @@ local ZONES = {
     { 0, "Zephras Isle", 1, 12, nil, new = true, starter = true }, -- Skyborne start
     { 2548, "Riverglades", 37, 46, nil, new = true },  -- Eastern Kingdoms, off Redridge / Burning Steppes
     { 2652, "Shen'dralas", 41, 47, nil, new = true },  -- estimated: not announced, beta shows level 43 mobs
-    { 0, "Mount Hyjal", 58, 60, nil, new = true },  -- endgame, via Darkwhisper Gorge in Winterspring
+    { 2482, "Mount Hyjal", 56, 60, nil, new = true },  -- endgame, via Darkwhisper Gorge in Winterspring
 
     -- Classic
     { 1429, "Elwynn Forest", 1, 10, "A" }, { 1426, "Dun Morogh", 1, 10, "A" }, { 1438, "Teldrassil", 1, 10, "A" },
