@@ -154,7 +154,7 @@ local function ShowPage(index)
     frame.skip:SetShown(pageIndex < #PAGES)
     -- progress dots
     for i, dot in ipairs(frame.dots) do
-        dot:SetColorTexture(unpack(i <= pageIndex and ns.color.accent or ns.color.border))
+        dot:SetColorTexture(unpack(i <= pageIndex and ns.color.accent or { 1, 1, 1, 0.2 }))
     end
 end
 
@@ -174,7 +174,7 @@ local function Build()
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    ns.Skin(frame, { 0.05, 0.05, 0.06, 0.97 }, ns.color.gold)
+    ns.Window(frame, { ns.color.bg[1], ns.color.bg[2], ns.color.bg[3], 0.97 })
     -- closing it counts as done (it won't pop up again by itself) - but not the game
     -- hiding the whole interface (a cinematic), nor an Escape pressed the moment it
     -- appeared (that one was meant for the cinematic)
@@ -188,12 +188,6 @@ local function Build()
         ns.cdb.setupDone = true
     end)
     table.insert(UISpecialFrames, "HearthboundSetupFrame")
-
-    local accent = frame:CreateTexture(nil, "ARTWORK")
-    accent:SetColorTexture(unpack(ns.color.accent))
-    accent:SetPoint("TOPLEFT", 1, -1)
-    accent:SetPoint("TOPRIGHT", -1, -1)
-    accent:SetHeight(2)
 
     local brand = ns.Text(frame, 10, ns.color.dim)
     brand:SetPoint("TOPLEFT", 20, -12)

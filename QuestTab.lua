@@ -620,7 +620,7 @@ function ns.BuildQuestTab(parent)
     heads[#heads + 1] = headRule
     listFrame:SetPoint("TOPLEFT", PAD, -58)
     listFrame:SetPoint("BOTTOMRIGHT", -PAD, 6)
-    ns.Skin(listFrame, { 0.08, 0.08, 0.09, 0.9 }, ns.color.border)
+    ns.Skin(listFrame, ns.color.well, ns.color.border)
     listFrame:EnableMouseWheel(true)
     listFrame:SetScript("OnMouseWheel", function(_, delta)
         state.offset = state.offset - delta * 3

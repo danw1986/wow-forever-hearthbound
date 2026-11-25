@@ -109,8 +109,8 @@ local function NewColumn(parent, x, width)
             down:SetPoint("RIGHT", 0, 0)
             local up = ns.CreateButton(row, "Up", 34, 18, function() Move(i, -1) end)
             up:SetPoint("RIGHT", down, "LEFT", -3, 0)
-            up.text:SetFont(ns.FONT, 10, "")
-            down.text:SetFont(ns.FONT, 10, "")
+            ns.SetFont(up.text, 10, "")
+            ns.SetFont(down.text, 10, "")
             row.Refresh = function()
                 local order = Current()[i]
                 row.label:SetText(format("|cff999999%d.|r %s", i, order and (ns.SECTION_NAMES[order] or ("Section " .. order)) or ""))
@@ -576,6 +576,8 @@ local function BuildSettingsPage(page)
         ns.Print("Theme saved - press |cffc79c6eReload UI|r to see it.")
     end, "Reload UI", function() ReloadUI() end)
     Find(col, themeButton, "theme colour colours reload")
+    col:Check("Modern font", "modernFont",
+        "Hearthbound's windows in a clean modern font. Off: the game's own font. Press Reload UI to see a change.")
     col:Check("Minimap XP ring", "minimapRing", "A ring of dots around the minimap button that fills with your XP.")
 
     -- Pop-ups & extras

@@ -92,7 +92,7 @@ local function Line(i)
         local d = self:GetParent().data
         if d then StaticPopup_Show("HEARTHBOUND_ABANDON_QUEST", d.title, nil, d) end
     end)
-    r.drop.text:SetFont(ns.FONT, 10, "")
+    ns.SetFont(r.drop.text, 10, "")
     r.drop:SetPoint("RIGHT", 0, 0)
     r.text:SetPoint("RIGHT", r.drop, "LEFT", -10, 0)
     lines[i] = r
@@ -119,7 +119,7 @@ function ns.BuildGuideTidy(parent)
                 h.data = nil
                 h:SetHeight(HEAD_H)
                 h:Place(y)
-                h.text:SetFont(ns.FONT, 10, "")
+                ns.SetFont(h.text, 10, "")
                 h.text:SetTextColor(unpack(ns.color.gold))
                 h.text:SetText(g.label:upper())
                 h.count:SetText(#items)
@@ -134,7 +134,7 @@ function ns.BuildGuideTidy(parent)
                     r.data = d
                     r:SetHeight(ROW_H)
                     r:Place(y)
-                    r.text:SetFont(ns.FONT, 12, "")
+                    ns.SetFont(r.text, 12, "")
                     r.text:SetTextColor(unpack(ns.color.text))
                     r.text:SetText(format("%s%s%s", d.level and format("|cff999999[%d]|r ", d.level) or "", d.title,
                         d.complete and "  |cff6fdc6f(ready to hand in)|r" or ""))

@@ -153,7 +153,7 @@ local function DrawList()
         if line.header then
             l.group = nil
             l:SetHeight(HEAD_H)
-            l.text:SetFont(ns.FONT, 10, "")
+            ns.SetFont(l.text, 10, "")
             l.text:SetTextColor(unpack(ns.color.gold))
             l.text:SetText(line.label:upper())
             l.tag:SetText(line.count)
@@ -168,7 +168,7 @@ local function DrawList()
             local g = line.group
             l.group = g
             l:SetHeight(ROW_H)
-            l.text:SetFont(ns.FONT, 12, "")
+            ns.SetFont(l.text, 12, "")
             local finished = g.left == 0
             local colour = g.skipped and "777777" or (finished and "8fbf8f" or "ffffff")
             l.text:SetText(format("|cff%s%s|r  |cff%s(%s)|r", colour, g.name, LevelColour(g.levelLo), Levels(g)))

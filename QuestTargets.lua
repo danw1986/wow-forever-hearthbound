@@ -322,7 +322,7 @@ end
 local function Build()
     frame = CreateFrame("Frame", "HearthboundQuestTargets", UIParent, ns.BACKDROP)
     frame:SetSize(WIDTH, 60)
-    ns.Skin(frame, { 0.05, 0.05, 0.06, 0.9 }, ns.color.border)
+    ns.Window(frame, { ns.color.bg[1], ns.color.bg[2], ns.color.bg[3], 0.9 }, { sheen = 50 })
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
     frame:EnableMouse(true)

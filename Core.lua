@@ -31,6 +31,7 @@ ns.defaults = {
     showZones = true,
     compactPanel = false,
     theme = "warrior",
+    modernFont = true, -- Barlow in Hearthbound's windows; off: the game's own font (Widgets.lua)
     panelOpacity = 0.92,
     questXPPreview = true,
     blizzQuestXP = true, -- the same gold on the game's own XP bar
@@ -361,6 +362,7 @@ ns.On("ADDON_LOADED", function(_, name)
     HearthboundCharDB.owner = Owner() -- lets the backup find this character's data
     ns.db, ns.cdb = HearthboundDB, HearthboundCharDB
     if ns.ApplyTheme then ns.ApplyTheme(ns.db.theme) end -- before any frame is built
+    if ns.ApplyFont then ns.ApplyFont(ns.db.modernFont ~= false) end
 
     for _, fn in ipairs(ns.inits) do
         fn()

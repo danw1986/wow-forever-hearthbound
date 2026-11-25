@@ -10,6 +10,11 @@ local ADDON_NAME, ns = ...
 local format = string.format
 
 ns.WHATS_NEW = {
+    { version = "0.12.0", items = {
+        { "A new look",
+          "Every Hearthbound window has a fresh, sleeker style: smoked-glass panels with a soft shadow, a glowing accent line along the top, a clean modern font, shaded bars, and buttons that light up in your theme's colour as you point at them. Prefer the game's own font? Turn off Modern font under Colours.",
+          settings = "layout" },
+    } },
     { version = "0.11.0", items = {
         { "Rares in your quest targets",
           "A rare or rare elite enemy near you - one the game puts on your minimap, or whose nameplate, target or mouseover says it's rare - now goes to the top of the quest targets window, with the skull marker. Click it to target and mark it. Rares on your side and faction leaders are left out.",
@@ -128,13 +133,8 @@ local function Build()
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    ns.Skin(frame, { 0.05, 0.05, 0.06, 0.97 }, ns.color.gold)
-    local accent = frame:CreateTexture(nil, "ARTWORK")
-    accent:SetColorTexture(unpack(ns.color.accent))
-    accent:SetPoint("TOPLEFT", 1, -1)
-    accent:SetPoint("TOPRIGHT", -1, -1)
-    accent:SetHeight(2)
-    frame.title = ns.Text(frame, 15, ns.color.gold)
+    ns.Window(frame, { ns.color.bg[1], ns.color.bg[2], ns.color.bg[3], 0.97 })
+    frame.title = ns.Text(frame, 15, ns.color.gold, nil, nil, true)
     frame.title:SetPoint("TOPLEFT", 14, -14)
     frame.lines = {}
     frame.ok = ns.CreateButton(frame, "Got it", 100, 24, function() frame:Hide() end)
